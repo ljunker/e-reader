@@ -1,0 +1,19 @@
+[project]
+name = "xtconvert"
+version = "0.1.0"
+description = "Convert PDFs, comics and images into .xtp page files for the DIY e-reader"
+requires-python = ">=3.11"
+dependencies = ["pymupdf>=1.24", "pillow>=10"]
+
+[project.scripts]
+xtconvert = "xtconvert.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
