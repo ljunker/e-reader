@@ -1,6 +1,7 @@
 # Printing the case (Bambu Lab A1 mini)
 
 Every part fits the A1 mini's 180 × 180 mm plate (the largest, the bezel and back shell, are about 95 × 137 mm).
+The carrier PCB takes the place of a printed chassis, so there are only three printed parts plus the button caps.
 
 ## Before the real print
 1. Measure your display module with calipers and update the `disp`/`mod_*`/`panel_*`/`active_*` values in [`cad/params.scad`](../cad/params.scad).
@@ -12,12 +13,11 @@ Every part fits the A1 mini's 180 × 180 mm plate (the largest, the bezel and ba
 |---|---|---|---|
 | `bezel.stl` | **Textured PEI** (gives the front a matte finish) | front face down, as exported | 0.20 mm Standard, 3 walls, 15 % gyroid, no supports. "Ironing" off. |
 | `back.stl` | Textured PEI | outside face down (export is already flipped) | 0.20 mm Standard, 3 walls, 15 % gyroid, no supports |
-| `chassis.stl` | Any | flat, as exported | 0.20 mm, 2 walls, 20 % infill |
 | `buttons.stl` | Smooth or textured | flange down | 0.12 mm Fine, 100 % infill (they are tiny), brim off |
 | `fit_test.stl` | Any | face down | 0.20 mm Draft |
 
 - **Material:** PLA works; PETG is tougher for the button flexing and snap fits. Matte black or dark grey PLA looks best around e-paper.
-- **Filament use:** about 55 g total.
+- **Filament use:** about 50 g total.
 - Use **Arachne** wall generator (the Bambu default) so the thin ribs print cleanly.
 - If button caps stick in their holes, raise `hole_tol` to 0.3–0.35 mm.
 
