@@ -3,7 +3,7 @@
 OPENSCAD ?= $(shell command -v openscad 2>/dev/null || echo /Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD)
 FLAGS = --backend=manifold
 
-PARTS = bezel chassis back buttons fit_test
+PARTS = bezel back buttons fit_test
 STLS  = $(addprefix stl/,$(addsuffix .stl,$(PARTS)))
 
 all: $(STLS) check
@@ -13,7 +13,7 @@ stl/%.stl: %.scad params.scad common.scad
 	$(OPENSCAD) $(FLAGS) -D print=true -o $@ $<
 
 # Fails if any printed part overlaps an electronics stand-in or another part.
-check: assembly.scad params.scad common.scad bezel.scad chassis.scad back.scad check.py
+check: assembly.scad params.scad common.scad bezel.scad back.scad check.py
 	python3 check.py "$(OPENSCAD)"
 
 png: 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Collision check for the case: renders the intersection of every printed part
-with every electronics stand-in (and with each other) and reports overlaps that
+with every electronics stand-in, of the printed parts with each other and of
+the stand-ins with each other and reports overlaps that
 have real volume. Faces that merely touch are ignored.
 
 Usage: python3 check.py [path/to/openscad]
@@ -15,11 +16,11 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 OPENSCAD = (sys.argv[1] if len(sys.argv) > 1 else None) or shutil.which("openscad") \
     or "/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"
-PARTS = ["bezel", "chassis", "back_shell"]
-DUMMIES = ["display_dummy", "feather_dummy", "sd_dummy", "battery_dummy", "buttons_dummy"]
+PARTS = ["bezel", "back_shell"]
+DUMMIES = ["display_dummy", "pcb_dummy", "feather_dummy", "sd_dummy", "battery_dummy", "buttons_dummy"]
 MIN_DEPTH = 0.05  # mm; thinner overlaps are touching faces / rounding noise
 
-HEADER = "".join(f"use <{HERE}/{f}>\n" for f in ("bezel.scad", "chassis.scad", "back.scad")) \
+HEADER = "".join(f"use <{HERE}/{f}>\n" for f in ("bezel.scad", "back.scad")) \
     + f"include <{HERE}/common.scad>\n"
 
 
@@ -44,7 +45,8 @@ def overlap(a, b, tmp):
 
 
 def main():
-    pairs = [(p, d) for p in PARTS for d in DUMMIES] + list(itertools.combinations(PARTS, 2))
+    pairs = [(p, d) for p in PARTS for d in DUMMIES] + list(itertools.combinations(PARTS, 2)) \
+        + list(itertools.combinations(DUMMIES, 2))
     bad = 0
     with tempfile.TemporaryDirectory() as tmp:
         for a, b in pairs:
