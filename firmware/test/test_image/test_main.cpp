@@ -71,6 +71,9 @@ void test_unsupported() {
     TEST_ASSERT_EQUAL(int(image::Format::Gif), int(image::sniff(gif, sizeof gif)));
     TEST_ASSERT_FALSE(image::decode(gif, sizeof gif, g, 300, 400));
     TEST_ASSERT_FALSE(image::decode(gif, 2, g, 300, 400));
+    d = loadFile("huge.png");
+    TEST_ASSERT_TRUE(d.size() > 0);
+    TEST_ASSERT_FALSE(image::decode(d.data(), d.size(), g, 300, 400));   // memory guard
 }
 
 void test_fit_keeps_aspect_and_never_enlarges() {

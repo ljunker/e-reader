@@ -121,8 +121,9 @@ CH1 = """<?xml version="1.0" encoding="utf-8"?>
 
 CH2 = """<?xml version="1.0" encoding="utf-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"><head><title>K2</title></head>
-<body><h1>Kapitel 2</h1>
-<p>Zeile eins<br/>Zeile zwei</p>
+<body><hgroup><h1>Kapitel 2</h1><p>Untertitel</p></hgroup>
+<p>Zeile eins<br/>
+   Zeile zwei</p>
 """ + "\n".join(
     f"<p>Absatz {i}: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.</p>"
     for i in range(40)
@@ -210,6 +211,8 @@ def main() -> None:
     (img / "gray16.png").write_bytes(png_bytes(Image.eval(gray.convert("I"), lambda v: v * 257).convert("I;16")))
     (img / "rgba.png").write_bytes(png_bytes(pic))
     (img / "palette.png").write_bytes(png_bytes(gray.convert("RGB").quantize(4)))
+    # 3000 x 2000 RGBA needs 24 MB unfiltered: more than the device allows
+    (img / "huge.png").write_bytes(png_bytes(Image.new("RGBA", (3000, 2000), (255, 255, 255, 255))))
     rgb = Image.new("RGB", (8, 8), (255, 0, 0))   # red -> luma 76
     (img / "rgb.png").write_bytes(png_bytes(rgb))
 

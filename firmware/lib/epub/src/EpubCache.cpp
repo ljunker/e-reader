@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <map>
+#include <new>
 #include <set>
 
 #include "Css.h"
@@ -180,6 +181,7 @@ public:
         else if (name == "h1") f.kind = etx::H1;
         else if (name == "h2") f.kind = etx::H2;
         else if (name.size() == 2 && name[0] == 'h' && name[1] >= '3' && name[1] <= '6') f.kind = etx::H3;
+        else if (name == "p" && parent.tag == "hgroup") f.kind = etx::H3;   // subtitle of a chapter heading
         else if (name == "blockquote") f.kind = etx::Quote;
         else if (name == "li") f.kind = etx::List;
         else if (name == "pre") {
@@ -270,8 +272,8 @@ private:
         etx::Block b;
         b.kind = f.kind;
         bool heading = f.kind == etx::H1 || f.kind == etx::H2 || f.kind == etx::H3;
-        b.align = f.align >= 0 ? uint8_t(f.align)
-                               : (heading || f.kind == etx::Pre || f.kind == etx::List ? etx::Left : etx::Justify);
+        uint8_t byKind = heading || f.kind == etx::Pre || f.kind == etx::List ? etx::Left : etx::Justify;
+        b.align = f.align >= 0 ? uint8_t(f.align) : byKind;
         b.indent = (f.kind == etx::Body || f.kind == etx::Quote) && f.indent != 0;
         b.spaceBefore = false;
         block_ = b;
@@ -319,11 +321,12 @@ private:
     void emit(uint32_t cp, const Frame& f) {
         ensureParagraph();
         resolveAnchors();
-        if (pendingSpace_ && paraHasContent_) {
+        if (pendingSpace_ && paraHasContent_ && !afterBreak_) {
             out_.raw(' ');
             if (capture_) headingText_ += ' ';
         }
         pendingSpace_ = false;
+        afterBreak_ = false;
         uint8_t want = (f.bold ? etx::kBold : 0) | (f.italic ? etx::kItalic : 0);
         if (want != curStyle_) {
             out_.raw(etx::kStyle);
@@ -351,6 +354,7 @@ private:
         if (needBlock_ || !paraHasContent_) return;
         out_.raw(etx::kBreak);
         pendingSpace_ = false;
+        afterBreak_ = true;
     }
 
     void rule() {
@@ -391,6 +395,7 @@ private:
     etx::Block block_;
     bool needBlock_ = true, paraHasContent_ = false, pendingSpace_ = false, pendingBreak_ = false;
     bool pageClean_ = true, stickySpace_ = false, prevHeading_ = false, afterImage_ = false, chapterStart_ = true;
+    bool afterBreak_ = false;   // no word gap right after <br>
     uint8_t curStyle_ = 0;
     std::string listPrefix_, tmp_;
     bool capture_ = false;
@@ -454,22 +459,29 @@ bool buildCache(zip::Archive& zip, const Package& pkg, uint32_t epubSize, io::Wr
     for (uint32_t i = 0; i < conv.images.size(); i++) {
         if (opt.progress) opt.progress("Pictures", i, uint32_t(conv.images.size()));
         ImageInfo info;
-        const zip::Entry* e = zip.find(conv.images[i]);
-        std::vector<uint8_t> data;
-        image::Gray g;
-        if (e && zip.read(*e, data, 8u << 20) == zip::Error::None &&
-            image::decode(data.data(), data.size(), g, opt.imageMaxW, opt.imageMaxH)) {
-            data.clear();
-            data.shrink_to_fit();
-            g = image::fit(g, opt.imageMaxW, opt.imageMaxH);
-            std::vector<uint8_t> packed = image::pack2bpp(g);
+        std::vector<uint8_t> packed;
+        try {   // a picture too big for memory is left out, not fatal
+            const zip::Entry* e = zip.find(conv.images[i]);
+            std::vector<uint8_t> data;
+            image::Gray g;
+            if (e && zip.read(*e, data, 4u << 20) == zip::Error::None &&
+                image::decode(data.data(), data.size(), g, opt.imageMaxW, opt.imageMaxH)) {
+                std::vector<uint8_t>().swap(data);
+                g = image::fit(g, opt.imageMaxW, opt.imageMaxH);
+                packed = image::pack2bpp(g);
+                info.w = uint16_t(g.w);
+                info.h = uint16_t(g.h);
+            }
+        } catch (const std::bad_alloc&) {
+            packed.clear();
+            info.w = info.h = 0;
+        }
+        if (info.w) {
             if (!eim.write(packed.data(), packed.size())) {
                 error = "Cannot write to the card (full?).";
                 return false;
             }
             info.offset = offset;
-            info.w = uint16_t(g.w);
-            info.h = uint16_t(g.h);
             offset += uint32_t(packed.size());
         }
         put32(table, info.offset);

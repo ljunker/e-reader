@@ -36,7 +36,10 @@ bool decodePng(const uint8_t* d, size_t n, Gray& out) {
     uint8_t pal[256][3] = {{0}};
     uint8_t palAlpha[256];
     memset(palAlpha, 255, sizeof palAlpha);
-    std::vector<uint8_t> idat;
+    struct Span {
+        size_t off, len;
+    };
+    std::vector<Span> idat;   // IDAT chunks are inflated in place, not copied
     size_t pos = 8;
     while (pos + 12 <= n) {
         uint32_t len = be32(d + pos);
@@ -54,7 +57,7 @@ bool decodePng(const uint8_t* d, size_t n, Gray& out) {
         } else if (!memcmp(type, "tRNS", 4) && ctype == 3) {
             for (uint32_t i = 0; i < len && i < 256; i++) palAlpha[i] = data[i];
         } else if (!memcmp(type, "IDAT", 4)) {
-            idat.insert(idat.end(), data, data + len);
+            if (len) idat.push_back({pos + 8, len});
         } else if (!memcmp(type, "IEND", 4)) {
             break;
         }
@@ -73,12 +76,31 @@ bool decodePng(const uint8_t* d, size_t n, Gray& out) {
     size_t bitsPP = size_t(ch) * depth;
     size_t stride = (w * bitsPP + 7) / 8;
     size_t bpp = std::max<size_t>(1, bitsPP / 8);
-    std::vector<uint8_t> raw;
     size_t need = h * (stride + 1);
-    auto r = zip::inflateBuffer(idat.data(), idat.size(), true, raw, need);
+    if (need > kMaxRawBytes || idat.empty()) return false;
+    std::vector<uint8_t> raw;
+    raw.reserve(need);
+    // walk the IDAT chunks as one zlib stream, skipping its 2-byte header
+    size_t chunk = 0, inChunk = 2;
+    if (idat[0].len < 2 || (d[idat[0].off] & 0x0F) != 8) return false;
+    auto r = zip::inflate(
+        [&](uint8_t* dst, size_t cap) -> size_t {
+            while (chunk < idat.size() && inChunk >= idat[chunk].len) {
+                chunk++;
+                inChunk = 0;
+            }
+            if (chunk >= idat.size()) return 0;
+            size_t k = std::min(cap, idat[chunk].len - inChunk);
+            memcpy(dst, d + idat[chunk].off + inChunk, k);
+            inChunk += k;
+            return k;
+        },
+        [&](const uint8_t* p, size_t k) {
+            k = std::min(k, need - raw.size());
+            raw.insert(raw.end(), p, p + k);
+            return raw.size() < need;   // stop once all rows are in
+        });
     if ((r != zip::InflateResult::Ok && r != zip::InflateResult::Stopped) || raw.size() < need) return false;
-    idat.clear();
-    idat.shrink_to_fit();
 
     // undo the row filters in place
     for (uint32_t y = 0; y < h; y++) {

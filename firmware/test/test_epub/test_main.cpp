@@ -195,7 +195,7 @@ void test_convert_epub3_text() {
     ASSERT_HAS(t, "<page>[h2|c|^]Abschnitt[p|^]Bild folgt:<img 1>");
     ASSERT_HAS(t, "[li|l]\xC2\xB7 Erstens[li|l]\xC2\xB7 Zweitens");
     ASSERT_HAS(t, "[p|>]<i>schr\xC3\xA4g<b>dick</>, <b>inline </>L\xC3\xB3" "dz ...<page>");
-    ASSERT_HAS(t, "<page>[h1|l|^]Kapitel 2[p|^]Zeile eins<br>Zeile zwei[p|>]Absatz 0");
+    ASSERT_HAS(t, "<page>[h1|l|^]Kapitel 2[h3|l|^]Untertitel[p|^]Zeile eins<br>Zeile zwei[p|>]Absatz 0");
 }
 
 void test_convert_epub3_toc_and_images() {
@@ -213,7 +213,7 @@ void test_convert_epub3_toc_and_images() {
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[0].pos).find("[h1|l|^]Kapitel 1"));
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[1].pos).find("[h2|c|^]Abschnitt"));
     TEST_ASSERT_EQUAL(1, items[1].level);
-    TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[2].pos).find("[h1|l|^]Kapitel 2"));
+    TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[2].pos).find("[h1|l|^]Kapitel 2[h3"));
     TEST_ASSERT_FALSE(readToc(toc, toc.d.size(), 12345, title, items));   // other EPUB size
 
     MemSource eim;
