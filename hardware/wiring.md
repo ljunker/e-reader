@@ -1,8 +1,5 @@
 # Wiring
 
-> With the [carrier board](kicad/carrier/README.md) all of this is on the PCB. This page is
-> for the breadboard bring-up or a hand-wired build; the GPIO assignment is identical.
-
 All pin numbers live in [`firmware/include/pins.h`](../firmware/include/pins.h) — change them there, not in code.
 
 > ⚠️ Check every pin against Unexpected Maker's FeatherS3 pinout card before soldering. The header

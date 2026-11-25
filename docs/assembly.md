@@ -1,6 +1,6 @@
 # Assembly
 
-Time: about 2 hours plus printing and PCB delivery.
+Time: about 2–3 hours plus printing.
 
 ## 1. Breadboard bring-up (before soldering anything permanently)
 1. Wire the display to the FeatherS3 per [wiring.md](../hardware/wiring.md) with jumper wires.
@@ -8,32 +8,27 @@ Time: about 2 hours plus printing and PCB delivery.
 3. Without an SD card you should see **"Storage: No microSD card"** on the display. That proves SPI, `PWR`, `BUSY` and rotation.
    - Upside down? Change `DISPLAY_ROTATION_PORTRAIT` in `firmware/include/config.h` (1 ↔ 3).
    - Nothing happens and the log shows "Busy Timeout": check `BUSY` and `PWR` (Rev2.2 needs `PWR` high).
-4. Add an SD breakout (Adafruit 4682) and the buttons, then put a card with `/books/*.txt` in it. The library should appear.
+4. Add the SD breakout and the buttons, then put a card with `/books/*.txt` in it. The library should appear.
 5. Measure the battery voltage with a multimeter and compare it with the % shown; adjust `VBAT_SCALE` in `config.h`.
 
-## 2. Solder the carrier board
-Follow the soldering order in [the carrier board README](../hardware/kicad/carrier/README.md#soldering-order).
-Then plug the board onto the breadboard-tested setup: same pins, same firmware.
+## 2. Prepare the display module
+- Remove (desolder or clip) the straight pin header on the back if it is fitted, and solder thin silicone wires directly to the pads. Keep the side-entry connector only if `mod_back_clear` in `params.scad` allows it.
+- Stick 1 mm foam tape on the back of the board where the chassis feet press (near the corners).
 
-## 3. Prepare the display module
-- Remove (desolder or clip) the straight pin header on the back if it is fitted. Either plug the
-  Waveshare cable's Dupont ends onto J3 (VCC first, labels on the silkscreen) or solder the wires
-  straight into J3's holes.
-- Stick 3 mm foam pads on the back of the display board near its corners; the carrier board presses
-  the display into the front frame through them.
+## 3. Button boards
+- **Front:** a strip of perfboard (≈ 44 × 14 mm) with 3 tactile switches 16 mm apart (MENU, OK, BACK), switches facing the front.
+- **Side:** a strip (≈ 55 × 7 mm) with 2 switches (PREV upper, NEXT lower) at the distance printed by `echo(side_btn_y)` in OpenSCAD (default ≈ 24 mm).
+- One common GND wire per board, one signal wire per button.
 
 ## 4. Case
-1. Press the 4 heat-set inserts into the front frame's corner bosses.
-2. Drop the 3 front button caps into their holes, flange inside.
-3. Lay the display face-down into the frame's ribs, cable towards the top.
-4. Route the display cable through the carrier board's opening and connect it to J3.
-5. Put the carrier board onto the 4 bosses (front buttons facing the display).
-6. Plug in the battery (check polarity at J2), lay it crosswise above the Feather on a strip of Kapton tape,
-   and fix it with double-sided tape.
-7. Put the 2 side button caps into the back shell's right wall, flange inside, and close the case with
-   4 × M2 × 12 screws. They go through the back shell and the carrier board into the inserts.
+1. Press the 4 heat-set inserts into the bezel.
+2. Drop the button caps into their holes, then slide the button boards into their slotted posts.
+3. Lay the display face-down into the bezel ribs.
+4. Screw the FeatherS3 onto the chassis standoffs (M2 × 4 self-tapping), USB-C towards the bottom edge. Put the battery into its pocket (Kapton tape between battery and anything sharp).
+5. Wire everything; route wires through the slots in the chassis plate. Put the slide switch into its holder in the back shell, in series with battery +.
+6. Stick the SD breakout onto its posts in the back shell, slot towards the bottom edge.
+7. Place the chassis onto the display, close with the back shell, and fit 4 × M2 × 8 screws.
 
 ## 5. First start
-Slide the power switch on (top edge). The library appears. Long-press NEXT/PREV to jump 10 entries/pages.
+Slide the power switch on. The library appears. Long-press NEXT/PREV to jump 10 entries/pages.
 After 3 minutes without input the reader sleeps; any button wakes it.
-The battery charges over USB-C only while the power switch is **on** (the switch sits in the battery line).

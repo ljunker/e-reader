@@ -1,7 +1,7 @@
 # DIY e-reader
 
 A pocket e-reader built around a **Waveshare 4.2" e-Paper Module V2** (400 × 300, black/white + 4 grays),
-an **ESP32-S3** (Unexpected Maker FeatherS3) on a small carrier board, a microSD card and a 3D-printed case.
+an **ESP32-S3** (Unexpected Maker FeatherS3), a microSD card and a 3D-printed case.
 It reads books in portrait at 300 × 400, sleeps between page turns and runs for weeks on a 1500–2000 mAh LiPo.
 
 ![Assembly](cad/renders/assembly.png)
@@ -11,20 +11,19 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 | **Formats** | `.txt` now; **EPUB** laid out on the device (milestone 4); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
 | **Controls** | PREV / NEXT on the right edge, MENU / OK / BACK below the screen; long press jumps 10 pages |
 | **Getting books on** | microSD card now; Wi‑Fi upload page and USB mass storage (milestone 6) |
-| **Electronics** | FeatherS3 on a 2-layer [carrier board](hardware/kicad/carrier/README.md) with microSD, buttons, power switch; no hand wiring |
-| **Case** | ~95 × 137 × 18.5 mm, parametric OpenSCAD, fits a Bambu A1 mini |
+| **Case** | ~95 × 137 × 17 mm, parametric OpenSCAD, fits a Bambu A1 mini |
 
 ## Repository
 | Folder | What's inside |
 |---|---|
-| [`hardware/`](hardware) | [Bill of materials](hardware/BOM.md), [wiring](hardware/wiring.md), [carrier board (KiCad)](hardware/kicad/carrier/README.md) |
+| [`hardware/`](hardware) | [Bill of materials](hardware/BOM.md), [wiring](hardware/wiring.md) |
 | [`cad/`](cad) | OpenSCAD case: `params.scad` holds every dimension; `make` exports STLs and runs a collision check |
 | [`firmware/`](firmware) | PlatformIO project (Arduino on ESP32-S3) |
 | [`tools/converter/`](tools/converter) | `xtconvert`: PDF / CBZ / images → `.xtp` |
 | [`docs/`](docs) | [Assembly](docs/assembly.md), [printing](docs/printing.md) |
 
 ## Quick start
-1. Buy the parts in the [BOM](hardware/BOM.md) and order the [carrier board](hardware/kicad/carrier/README.md). Meanwhile, test on a breadboard per [wiring.md](hardware/wiring.md).
+1. Buy the parts in the [BOM](hardware/BOM.md) and wire them per [wiring.md](hardware/wiring.md) (breadboard first).
 2. Flash the firmware:
    ```bash
    cd firmware && pio run -t upload
@@ -42,7 +41,6 @@ cd firmware && pio test -e native          # layout + .xtp unit tests on your co
 cd tools/converter && uv run pytest        # converter tests
 make -C cad                                # STLs + collision check (needs OpenSCAD 2024+)
 make -C cad png                            # preview renders
-make -C hardware/kicad/carrier             # regenerate, route and check the carrier PCB (needs KiCad 10)
 ```
 
 ## Status / roadmap
@@ -55,5 +53,4 @@ make -C hardware/kicad/carrier             # regenerate, route and check the car
 - [ ] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
 - [ ] Wi‑Fi upload page, USB mass storage
-- [x] Carrier PCB (KiCad, autorouted, ERC/DRC clean)
-- [ ] Carrier PCB tested with real parts
+- [ ] Optional KiCad carrier PCB (draft in tag `carrier-pcb-draft`)

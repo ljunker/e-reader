@@ -16,11 +16,11 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 OPENSCAD = (sys.argv[1] if len(sys.argv) > 1 else None) or shutil.which("openscad") \
     or "/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"
-PARTS = ["bezel", "back_shell"]
-DUMMIES = ["display_dummy", "pcb_dummy", "feather_dummy", "sd_dummy", "battery_dummy", "buttons_dummy"]
+PARTS = ["bezel", "chassis", "back_shell"]
+DUMMIES = ["display_dummy", "feather_dummy", "sd_dummy", "battery_dummy", "buttons_dummy"]
 MIN_DEPTH = 0.05  # mm; thinner overlaps are touching faces / rounding noise
 
-HEADER = "".join(f"use <{HERE}/{f}>\n" for f in ("bezel.scad", "back.scad")) \
+HEADER = "".join(f"use <{HERE}/{f}>\n" for f in ("bezel.scad", "chassis.scad", "back.scad")) \
     + f"include <{HERE}/common.scad>\n"
 
 
