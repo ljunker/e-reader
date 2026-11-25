@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -20,13 +21,17 @@ public:
     uint32_t openPosition() const;
 
 private:
-    enum class Screen { Library, Reader, Menu, Message };
+    enum class Screen { Library, Reader, Menu, Toc, Message };
     struct MenuItem { String label; void (Ui::*action)(); };
 
     void showLibrary(bool full = false);
     void showReader(bool full = false);
     void showMenu();
     void showMessage(const String& title, const String& text);
+    void showToc();
+    // One page of a selectable list below the header; `item` fills in the
+    // label, an optional left indent and an optional tag shown on the right.
+    void drawList(int count, int sel, const std::function<void(int, String&, int&, const char*&)>& item);
     void drawStatus();
     void drawHeader(const char* title);
 
@@ -37,6 +42,7 @@ private:
     // menu actions
     void actFontSmaller();
     void actFontLarger();
+    void actContents();
     void actToStart();
     void actLibrary();
     void actSleep();
@@ -49,6 +55,7 @@ private:
     std::unique_ptr<Book> book_;
     std::vector<MenuItem> menu_;
     int menuSel_ = 0;
+    int tocSel_ = 0;
     uint32_t turnsSinceSave_ = 0;
     String storageError_;
 };
