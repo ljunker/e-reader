@@ -6,14 +6,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "ByteSource.h"
+
 namespace xtp {
 
-class ByteSource {
-public:
-    virtual ~ByteSource() = default;
-    // Read exactly n bytes at offset; return false on short read / error.
-    virtual bool readAt(uint32_t offset, uint8_t* dst, size_t n) = 0;
-};
+using ByteSource = io::ByteSource;
 
 enum class Error { None, Io, BadMagic, Unsupported, BadPage, Corrupt };
 
