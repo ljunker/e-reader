@@ -60,7 +60,7 @@ module switch_holder() {
 
 module back_shell() {
     difference() {
-        union() {
+        handed() union() {
             difference() {
                 case_body(split_z, case_d, round_front = false);
                 rbox_inset(wall, split_z - eps, case_d - back_t);
@@ -81,7 +81,7 @@ module back_shell() {
             switch_holder();
         }
         screw_holes();
-        // engraved label on the back
+        // engraved label on the back (outside handed() so it stays readable)
         translate([case_w / 2, case_h / 2, case_d - 0.4])
             linear_extrude(1) text("e-reader", size = 7, halign = "center", valign = "center");
     }

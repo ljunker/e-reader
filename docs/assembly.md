@@ -17,7 +17,7 @@ Time: about 2–3 hours plus printing.
 
 ## 3. Button boards
 - **Front:** a strip of perfboard (≈ 44 × 14 mm) with 3 tactile switches 16 mm apart (MENU, OK, BACK), switches facing the front.
-- **Side:** a strip (≈ 55 × 7 mm) with 2 switches (PREV upper, NEXT lower) at the distance printed by `echo(side_btn_y)` in OpenSCAD (default ≈ 24 mm).
+- **Side:** sits on the left edge (`left_handed = true` in `params.scad`; set it to `false` for the right edge). A strip (≈ 55 × 7 mm) with 2 switches (PREV upper, NEXT lower) at the distance printed by `echo(side_btn_y)` in OpenSCAD (default ≈ 24 mm).
 - One common GND wire per board, one signal wire per button.
 
 ## 4. Case

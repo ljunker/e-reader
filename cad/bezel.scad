@@ -85,21 +85,23 @@ module bosses() {
 }
 
 module bezel() {
-    difference() {
-        union() {
-            difference() {
-                case_body(0, split_z);
-                rbox_inset(wall, front_t, split_z + eps);
-                window_cut();
-                front_button_holes();
-                side_button_holes();
+    handed() {
+        difference() {
+            union() {
+                difference() {
+                    case_body(0, split_z);
+                    rbox_inset(wall, front_t, split_z + eps);
+                    window_cut();
+                    front_button_holes();
+                    side_button_holes();
+                }
+                display_ribs();
+                front_board_guides();
+                side_board_guides();
+                bosses();
             }
-            display_ribs();
-            front_board_guides();
-            side_board_guides();
-            bosses();
+            for (p = screw_pos) translate([p[0], p[1], split_z - insert_l]) cylinder(d = insert_d, h = insert_l + 1);
         }
-        for (p = screw_pos) translate([p[0], p[1], split_z - insert_l]) cylinder(d = insert_d, h = insert_l + 1);
     }
 }
 

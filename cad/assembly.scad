@@ -34,5 +34,5 @@ if (check) {
     intersection() { bezel(); chassis(); }
     intersection() { back_shell(); chassis(); }
 } else if (section) {
-    difference() { view(); translate([feather_x0 + feather_w / 2, -1, -1]) cube([200, 200, 100]); }
+    difference() { view(); translate([hx(feather_x0 + feather_w / 2), -1, -1]) cube([200, 200, 100]); }
 } else view();

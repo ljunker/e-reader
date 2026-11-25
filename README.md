@@ -9,7 +9,7 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 | | |
 |---|---|
 | **Formats** | `.txt` now; **EPUB** laid out on the device (milestone 4); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
-| **Controls** | PREV / NEXT on the right edge, MENU / OK / BACK below the screen; long press jumps 10 pages |
+| **Controls** | PREV / NEXT on the grip edge (left by default, `left_handed` in `cad/params.scad`), MENU / OK / BACK below the screen; long press jumps 10 pages |
 | **Getting books on** | microSD card now; Wi‑Fi upload page and USB mass storage (milestone 6) |
 | **Case** | ~95 × 137 × 17 mm, parametric OpenSCAD, fits a Bambu A1 mini |
 
