@@ -41,6 +41,7 @@ cd firmware && pio test -e native          # layout, EPUB, zip, image and .xtp u
 cd tools/converter && uv run pytest        # converter tests
 make -C cad                                # STLs + collision check (needs OpenSCAD 2024+)
 make -C cad png                            # preview renders
+make -C cad steps                          # step-by-step pictures for docs/assembly.md
 ```
 
 ## EPUB on the device

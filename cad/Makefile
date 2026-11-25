@@ -22,7 +22,19 @@ png:
 	$(OPENSCAD) $(FLAGS) --imgsize=1600,1200 --viewall --autocenter -D explode=25 --camera=0,0,0,235,0,35,0 -o renders/exploded.png assembly.scad
 	$(OPENSCAD) $(FLAGS) --imgsize=1600,1200 --viewall --autocenter -D section=true --camera=0,0,0,90,0,90,0 -o renders/section.png assembly.scad
 
+# Pictures for docs/assembly.md: one per assembly step, the finished reader and the fit test.
+IMG = ../docs/img
+PIC = $(OPENSCAD) $(FLAGS) --imgsize=1200,900 --viewall --autocenter --colorscheme=Tomorrow
+BACK_CAM  = 0,0,0,30,0,-15,0
+FRONT_CAM = 0,0,0,150,0,195,0
+
+steps: assembly.scad params.scad common.scad bezel.scad chassis.scad back.scad buttons.scad fit_test.scad
+	@mkdir -p $(IMG)
+	for n in 1 2 3 4 5 6 7; do $(PIC) -D step=$$n --camera=$(BACK_CAM) -o $(IMG)/step-$$n.png assembly.scad || exit 1; done
+	$(PIC) -D step=8 --camera=$(FRONT_CAM) -o $(IMG)/front.png assembly.scad
+	$(PIC) --camera=$(BACK_CAM) -o $(IMG)/fit-test.png fit_test.scad
+
 clean:
 	rm -rf stl renders
 
-.PHONY: all check png clean
+.PHONY: all check png steps clean

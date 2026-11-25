@@ -1,0 +1,64 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='900' height='560' viewBox='0 0 900 560' font-family='Helvetica, Arial, sans-serif' font-size='14'>
+<title>Button boards</title>
+<rect width='900' height='560' fill='#ffffff'/>
+<defs><marker id='a' viewBox='0 0 10 10' refX='5' refY='5' markerWidth='6' markerHeight='6' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#888'/></marker></defs>
+<text x='450.0' y='34' font-size='20' text-anchor='middle' font-weight='bold' fill='#222'>Button boards (seen from the solder side, i.e. from the back)</text>
+<rect x='60' y='120' width='352' height='112' rx='6' fill='#d8c39a' stroke='#8a7550' stroke-width='2'/>
+<text x='60' y='74' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>Front board ≈ 44 × 14 mm, switches 16 mm apart</text>
+<rect x='78' y='146' width='60' height='60' rx='4' fill='#222' stroke='#000'/>
+<circle cx='108' cy='176' r='16' fill='#555' stroke='#000'/>
+<circle cx='84' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='84' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='132' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='132' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<text x='108' y='136' font-size='15' text-anchor='middle' font-weight='bold' fill='#222'>BACK</text>
+<text x='108' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
+<polyline points='132,200 132,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
+<polyline points='84,152 84,360 482,360' fill='none' stroke='#ff7f0e' stroke-width='4' stroke-linejoin='round'/>
+<text x='490' y='365' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>IO7  (BACK)</text>
+<rect x='206' y='146' width='60' height='60' rx='4' fill='#222' stroke='#000'/>
+<circle cx='236' cy='176' r='16' fill='#555' stroke='#000'/>
+<circle cx='212' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='212' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='260' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='260' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<text x='236' y='136' font-size='15' text-anchor='middle' font-weight='bold' fill='#222'>OK</text>
+<text x='236' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
+<polyline points='260,200 260,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
+<polyline points='212,152 212,382 482,382' fill='none' stroke='#2ca02c' stroke-width='4' stroke-linejoin='round'/>
+<text x='490' y='387' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>IO6  (OK)</text>
+<rect x='334' y='146' width='60' height='60' rx='4' fill='#222' stroke='#000'/>
+<circle cx='364' cy='176' r='16' fill='#555' stroke='#000'/>
+<circle cx='340' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='340' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='388' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
+<circle cx='388' cy='200' r='4' fill='#d9b44a' stroke='#333'/>
+<text x='364' y='136' font-size='15' text-anchor='middle' font-weight='bold' fill='#222'>MENU</text>
+<text x='364' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
+<polyline points='388,200 388,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
+<polyline points='340,152 340,404 482,404' fill='none' stroke='#1f77b4' stroke-width='4' stroke-linejoin='round'/>
+<text x='490' y='409' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>IO5  (MENU)</text>
+<polyline points='132,218 388,218 388,218 452,218 452,430 482,430' fill='none' stroke='#111111' stroke-width='4' stroke-linejoin='round'/>
+<text x='490' y='435' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>GND</text>
+<text x='60' y='480' font-size='13' text-anchor='start' font-weight='normal' fill='#444'>Seen from the front the order is MENU · OK · BACK (left to right).</text>
+<text x='60' y='500' font-size='13' text-anchor='start' font-weight='normal' fill='#444'>Wire two diagonally opposite legs of each switch: that pair always switches, whichever way the switch is turned.</text>
+<text x='680' y='64' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>Side board ≈ 55 × 7 mm</text>
+<rect x='720' y='90' width='42' height='330' rx='5' fill='#d8c39a' stroke='#8a7550' stroke-width='2'/>
+<rect x='723' y='162' width='36' height='36' rx='3' fill='#222'/>
+<circle cx='741' cy='180' r='10' fill='#555'/>
+<text x='710' y='185' font-size='14' text-anchor='end' font-weight='bold' fill='#222'>PREV</text>
+<polyline points='762,168 830,168' fill='none' stroke='#d62728' stroke-width='4' stroke-linejoin='round'/>
+<text x='836' y='173' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>IO14</text>
+<polyline points='762,192 790,192' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
+<rect x='723' y='310.20000000000005' width='36' height='36' rx='3' fill='#222'/>
+<circle cx='741' cy='328.20000000000005' r='10' fill='#555'/>
+<text x='710' y='333.20000000000005' font-size='14' text-anchor='end' font-weight='bold' fill='#222'>NEXT</text>
+<polyline points='762,316.20000000000005 830,316.20000000000005' fill='none' stroke='#8c4fbf' stroke-width='4' stroke-linejoin='round'/>
+<text x='836' y='321.20000000000005' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>IO1</text>
+<polyline points='762,340.20000000000005 790,340.20000000000005' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
+<polyline points='790,192 790,410 830,410' fill='none' stroke='#111111' stroke-width='4' stroke-linejoin='round'/>
+<text x='836' y='415' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>GND</text>
+<line x1='660' y1='180' x2='660' y2='328.20000000000005' stroke='#888' stroke-width='1.5' marker-start='url(#a)' marker-end='url(#a)'/>
+<text x='654' y='259.4' font-size='12' text-anchor='end' font-weight='normal' fill='#555'>≈ 24.7 mm</text>
+<text x='680' y='450' font-size='13' text-anchor='start' font-weight='normal' fill='#444'>upper = PREV, lower = NEXT</text>
+</svg>

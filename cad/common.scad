@@ -2,16 +2,16 @@ include <params.scad>
 
 eps = 0.01;
 
-// Mirrors its children for the left-handed case (see left_handed in params.scad).
+// Mirrors its children for the right-handed case (see left_handed in params.scad).
 // Every printed part and every stand-in goes through this, so the parts stay
 // consistent with each other and with the collision check.
 module handed() {
-    if (left_handed) translate([case_w, 0, 0]) mirror([1, 0, 0]) children();
+    if (!left_handed) translate([case_w, 0, 0]) mirror([1, 0, 0]) children();
     else children();
 }
 
 // X coordinate after handed(), for things placed outside of it.
-function hx(x) = left_handed ? case_w - x : x;
+function hx(x) = left_handed ? x : case_w - x;
 
 // Rounded rectangle in XY, extruded from z0 to z1.
 module rbox(w, h, z0, z1, r = case_r) {
@@ -79,5 +79,29 @@ module buttons_dummy() {
         color("tan") translate([sbb_x1 - perf_t, side_btn_y[1] - 8, sbb_z0]) cube([perf_t, sbb_h, sbb_z1 - sbb_z0]);
         for (y = side_btn_y) color("black")
             translate([sbb_x1, y - sw_body / 2, side_btn_z - sw_body / 2]) cube([sw_h, sw_body, sw_body]);
+    }
+}
+
+// ---------- illustration-only stand-ins (step renders in assembly.scad) ----------
+// Not part of the collision check: they sit in holes of the printed parts.
+module inserts_dummy() {
+    handed() color("goldenrod")
+        for (p = screw_pos) translate([p[0], p[1], split_z - insert_l]) cylinder(d = insert_d, h = insert_l);
+}
+
+module screws_dummy() {
+    handed() color("silver")
+        for (p = screw_pos) translate([p[0], p[1], case_d - 0.8 - screw_head_h]) {
+            cylinder(d = screw_head_d, h = screw_head_h);
+            translate([0, 0, -8]) cylinder(d = 2, h = 8);
+        }
+}
+
+module slide_dummy() {
+    b = slide_body;
+    y1 = case_h - wall;
+    handed() {
+        color("black") translate([slide_x - b[0] / 2 + tol, y1 - b[1], slide_z - b[2] / 2]) cube(b);
+        color("white") translate([slide_x - 1, y1 - eps, slide_z - 0.75]) cube([2, wall - 0.3, 1.5]);
     }
 }
