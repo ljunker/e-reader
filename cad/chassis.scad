@@ -73,9 +73,11 @@ module battery_pocket() {
 }
 
 module chassis() {
-    difference() {
-        union() { plate(); feet(); feather_standoffs(); battery_pocket(); }
-        for (h = feather_holes) translate([feather_x0 + h[0], feather_y0 + h[1], 0]) cylinder(d = 1.8, h = case_d);
+    handed() {
+        difference() {
+            union() { plate(); feet(); feather_standoffs(); battery_pocket(); }
+            for (h = feather_holes) translate([feather_x0 + h[0], feather_y0 + h[1], 0]) cylinder(d = 1.8, h = case_d);
+        }
     }
 }
 

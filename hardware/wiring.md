@@ -38,8 +38,8 @@ All pin numbers live in [`firmware/include/pins.h`](../firmware/include/pins.h) 
 
 | Button | FeatherS3 | Position on case |
 |---|---|---|
-| PREV | IO14 | right side, upper |
-| NEXT | IO1  | right side, lower |
+| PREV | IO14 | grip side (left, or right if `left_handed = false`), upper |
+| NEXT | IO1  | grip side, lower |
 | MENU | IO5  | front, below screen, 1st |
 | OK   | IO6  | front, 2nd |
 | BACK | IO7  | front, 3rd |

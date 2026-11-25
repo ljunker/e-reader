@@ -39,6 +39,14 @@ mod_back_clear = 3.0;
 window_margin = 0.6;  // extra opening around the active area
 window_chamfer = 1.2; // 45° chamfer on the front edge of the window
 
+// ---------- handedness ----------
+// true: grip and PREV/NEXT on the LEFT edge, for holding the reader in the left
+// hand. The whole layout below is written for the right-handed version and
+// mirrored at X = case_w / 2 (see handed() in common.scad); only the engraved
+// label is kept readable. The firmware needs no change: PREV stays the upper
+// side button, NEXT the lower one.
+left_handed = true;
+
 // ---------- case ----------
 wall         = 2.0;   // side wall
 front_t      = 1.6;   // front face thickness
@@ -46,7 +54,7 @@ back_t       = 1.6;   // back face thickness
 gap          = 0.4;   // gap around the display module
 chin         = 22;    // space below the display for the button row
 top_margin   = 7;     // space above the display (room for the screw bosses)
-spine        = 12;    // extra width on the right: grip + side page-turn buttons
+spine        = 12;    // extra width on the grip side: side page-turn buttons
 case_r       = 6;     // corner radius (plan view)
 edge_r       = 1.2;   // rounding of the front edge
 
