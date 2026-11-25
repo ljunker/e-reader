@@ -7,6 +7,8 @@ Every part fits the A1 mini's 180 × 180 mm plate (the largest, the bezel and ba
 2. Run `make -C cad` — it exports the STLs to `cad/stl/` and runs the collision check.
 3. Print **`fit_test.stl`** (front face + display ribs, ~20 min). Drop the display in: the active area must be centred in the window and the module must slide in without force. Adjust `active_off_*`, `window_margin` or `gap`, then re-export.
 
+   ![Fit test: front face with window and display ribs, seen from the back](img/fit-test.png)
+
 ## Bambu Studio settings
 | Part | Plate | Orientation | Settings |
 |---|---|---|---|
