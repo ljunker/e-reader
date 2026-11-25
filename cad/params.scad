@@ -1,7 +1,9 @@
 // =====================================================================
 //  E-reader case: every dimension in one place.
-//  Coordinates (portrait, looking at the screen):
-//    X → right, Y → up (0 = bottom edge), Z → into the device (0 = front face).
+//  Coordinates (portrait, looking at the BACK of the reader, the way it lies
+//  face-down on the bench during assembly):
+//    X → right, Y → up (0 = bottom edge), Z → towards you (0 = front face).
+//  Seen from the screen side, X therefore points to the LEFT.
 //  All values in mm.
 //
 //  !!! MEASURE YOUR DISPLAY MODULE WITH CALIPERS AND FIX THE "disp_*" VALUES !!!
@@ -40,11 +42,12 @@ window_margin = 0.6;  // extra opening around the active area
 window_chamfer = 1.2; // 45° chamfer on the front edge of the window
 
 // ---------- handedness ----------
-// true: grip and PREV/NEXT on the LEFT edge, for holding the reader in the left
-// hand. The whole layout below is written for the right-handed version and
-// mirrored at X = case_w / 2 (see handed() in common.scad); only the engraved
-// label is kept readable. The firmware needs no change: PREV stays the upper
-// side button, NEXT the lower one.
+// true: grip and PREV/NEXT on the LEFT edge (seen from the screen), for holding
+// the reader in the left hand. The layout below is written for this version
+// (grip at high X = left from the front); false mirrors everything at
+// X = case_w / 2 (see handed() in common.scad), only the engraved label is kept
+// readable. The firmware needs no change: PREV stays the upper side button,
+// NEXT the lower one.
 left_handed = true;
 
 // ---------- case ----------
@@ -97,14 +100,16 @@ cap_flange_t = 1.0;
 cap_travel  = 0.3;   // pre-load gap between cap and switch
 btn_pitch   = 16;
 btn_y       = wall + chin / 2;
-btn_cx      = case_w / 2 + 8;    // right of centre, leaves room for the Feather on the left
-front_btn_x = [btn_cx - btn_pitch, btn_cx, btn_cx + btn_pitch];   // MENU, OK, BACK
+btn_cx      = case_w / 2 + 8;    // towards the grip, leaves room for the Feather
+// Left to right seen from the screen: MENU, OK, BACK (X points left from the front).
+// The right-handed (mirrored) case swaps them; wire by position, see wiring.md.
+front_btn_x = [btn_cx + btn_pitch, btn_cx, btn_cx - btn_pitch];   // MENU, OK, BACK
 // front button board (perfboard, switches face forward)
 fbb_z0 = front_t + cap_flange_t + cap_travel + sw_h;   // front of the perfboard
 fbb_w  = 2 * btn_pitch + 12;
 fbb_h  = 14;
 
-// side page-turn buttons on the right edge (switches face +X)
+// side page-turn buttons on the grip edge at high X (switches face +X)
 side_btn_y   = [mod_y0 + 0.62 * mod_h, mod_y0 + 0.38 * mod_h];  // PREV, NEXT
 side_btn_z   = 5.5;
 side_cap_w   = 5.0;   // oval caps: width (Z) × length (Y)

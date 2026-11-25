@@ -2,16 +2,16 @@ include <params.scad>
 
 eps = 0.01;
 
-// Mirrors its children for the left-handed case (see left_handed in params.scad).
+// Mirrors its children for the right-handed case (see left_handed in params.scad).
 // Every printed part and every stand-in goes through this, so the parts stay
 // consistent with each other and with the collision check.
 module handed() {
-    if (left_handed) translate([case_w, 0, 0]) mirror([1, 0, 0]) children();
+    if (!left_handed) translate([case_w, 0, 0]) mirror([1, 0, 0]) children();
     else children();
 }
 
 // X coordinate after handed(), for things placed outside of it.
-function hx(x) = left_handed ? case_w - x : x;
+function hx(x) = left_handed ? x : case_w - x;
 
 // Rounded rectangle in XY, extruded from z0 to z1.
 module rbox(w, h, z0, z1, r = case_r) {
