@@ -1,6 +1,5 @@
 // Front bezel: front face with the display window, side walls up to split_z,
-// locating ribs for the display module, screw bosses with heat-set inserts that
-// the carrier PCB rests on, and support posts behind the front buttons.
+// locating ribs for the display module, heat-set insert bosses, button holes.
 // Print face-down (as modelled, z = 0 on the bed) on the textured PEI plate. No supports.
 include <common.scad>
 
@@ -26,6 +25,12 @@ module front_button_holes() {
     }
 }
 
+module side_button_holes() {
+    for (y = side_btn_y)
+        translate([case_w - wall - eps, y, side_btn_z]) rotate([0, 90, 0])
+            oval(side_cap_l + hole_tol, side_cap_w + hole_tol, wall + 2 * eps);
+}
+
 // Ribs that locate the display module in X/Y; gaps keep it removable.
 module display_ribs() {
     rib_t = 1.2;
@@ -43,19 +48,40 @@ module display_ribs() {
     }
 }
 
-// Posts between the front switches carry the button force into the front face,
-// so the PCB does not flex when a button is pressed.
-module button_posts() {
-    xs = [front_btn_x[0] - btn_pitch / 2, (front_btn_x[0] + front_btn_x[1]) / 2,
-          (front_btn_x[1] + front_btn_x[2]) / 2, front_btn_x[2] + btn_pitch / 2];
-    for (x = xs) translate([x - 1.5, btn_y - 1.5, front_t - eps])
-        cube([3, 3, pcb_z0 - front_t + eps]);
+// Slotted posts that hold the front button board at depth fbb_z0.
+module front_board_guides() {
+    post_h = fbb_z0 + perf_t + 0.8 - front_t;
+    for (side = [-1, 1]) {
+        x = btn_cx + side * (fbb_w / 2 + 0.6);
+        translate([x - 1.4, btn_y - 4, front_t - eps])
+            difference() {
+                cube([2.8, 8, post_h]);
+                // slot the board edge sits in
+                translate([side < 0 ? 1.4 : -eps, -eps, fbb_z0 - front_t]) cube([1.4 + eps, 8 + 2 * eps, perf_t + tol]);
+            }
+    }
+    // spacers between the switches take the button force
+    for (i = [0 : 1]) translate([(front_btn_x[i] + front_btn_x[i + 1]) / 2 - 1.5, btn_y - 3, front_t - eps])
+        cube([3, 6, fbb_z0 - front_t]);
 }
 
-// The PCB rests on these; heat-set inserts take the M2 screws from the back.
+// Slotted posts for the side button board (board in the YZ plane, switches face +X).
+module side_board_guides() {
+    y0 = side_btn_y[1] - 8;
+    for (y = [y0 - 1.5, y0 + sbb_h])
+        translate([sbb_x1 - perf_t - 1.2 - tol, y, front_t - eps])
+            difference() {
+                cube([perf_t + 2.4 + tol, 1.5, split_z - front_t]);
+                translate([1.2, -eps, -eps]) cube([perf_t + tol, 1.5 + 2 * eps, split_z]);
+            }
+    // spacer between the two switches
+    translate([sbb_x1, (side_btn_y[0] + side_btn_y[1]) / 2 - 2, front_t - eps])
+        cube([sw_h - 0.5, 4, split_z - front_t - 1]);
+}
+
 module bosses() {
     for (p = screw_pos) translate([p[0], p[1], front_t - eps])
-        cylinder(d = boss_d, h = pcb_z0 - front_t + eps);
+        cylinder(d = boss_d, h = split_z - front_t + eps);
 }
 
 module bezel() {
@@ -66,12 +92,14 @@ module bezel() {
                 rbox_inset(wall, front_t, split_z + eps);
                 window_cut();
                 front_button_holes();
+                side_button_holes();
             }
             display_ribs();
-            button_posts();
+            front_board_guides();
+            side_board_guides();
             bosses();
         }
-        for (p = screw_pos) translate([p[0], p[1], pcb_z0 - insert_l]) cylinder(d = insert_d, h = insert_l + 1);
+        for (p = screw_pos) translate([p[0], p[1], split_z - insert_l]) cylinder(d = insert_d, h = insert_l + 1);
     }
 }
 
