@@ -8,7 +8,7 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 
 | | |
 |---|---|
-| **Formats** | `.txt` now; **EPUB** laid out on the device (milestone 4); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
+| **Formats** | `.txt`; **EPUB** laid out on the device (bold/italic, headings, pictures, table of contents); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
 | **Controls** | PREV / NEXT on the grip edge (left by default, `left_handed` in `cad/params.scad`), MENU / OK / BACK below the screen; long press jumps 10 pages |
 | **Getting books on** | microSD card now; Wi‑Fi upload page and USB mass storage (milestone 6) |
 | **Case** | ~95 × 137 × 17 mm, parametric OpenSCAD, fits a Bambu A1 mini |
@@ -28,7 +28,7 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
    ```bash
    cd firmware && pio run -t upload
    ```
-3. Format a microSD card as FAT32, make a `books/` folder and copy `.txt` files and converted PDFs into it:
+3. Format a microSD card as FAT32, make a `books/` folder and copy `.epub` and `.txt` files and converted PDFs into it:
    ```bash
    cd tools/converter && uv run xtconvert ~/Downloads/paper.pdf --mode width -o /Volumes/SD/books/
    ```
@@ -37,11 +37,23 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 
 ## Development
 ```bash
-cd firmware && pio test -e native          # layout + .xtp unit tests on your computer
+cd firmware && pio test -e native          # layout, EPUB, zip, image and .xtp unit tests on your computer
 cd tools/converter && uv run pytest        # converter tests
 make -C cad                                # STLs + collision check (needs OpenSCAD 2024+)
 make -C cad png                            # preview renders
 ```
+
+## EPUB on the device
+The first time a book is opened, the reader converts it once into cache files in `/.reader/` on the card
+(this takes a few seconds to about a minute with many pictures; the panel shows the progress).
+After that, opening, turning pages and changing the font size are as fast as with `.txt` files.
+MENU → **Contents** jumps to a chapter.
+
+Supported: EPUB 2 and 3, chapters in reading order, headings, bold and italic, alignment, blockquotes,
+lists, line breaks, page breaks from CSS, JPEG (baseline) and PNG pictures dithered to the panel,
+and the table of contents from the nav document or the NCX.
+Not supported: DRM-protected books (the reader says so), GIF/SVG and progressive JPEG pictures (left out),
+characters outside Latin-1 (shown as the nearest Latin letter or `?` until the TTF fonts arrive), footnote pop-ups.
 
 ## Status / roadmap
 - [x] Hardware design, wiring, BOM
@@ -50,7 +62,7 @@ make -C cad png                            # preview renders
 - [x] Firmware: display, buttons, SD, deep sleep + wake on any button, library, TXT reader with justified text and cached pagination, `.xtp` viewer, font sizes, saved positions
 - [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery scale)
 - [ ] Anti-aliased fonts generated from TTFs, hyphenation
-- [ ] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
+- [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
 - [ ] Wi‑Fi upload page, USB mass storage
 - [ ] Optional KiCad carrier PCB (draft in tag `carrier-pcb-draft`)
