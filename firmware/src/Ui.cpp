@@ -1,5 +1,7 @@
 #include "Ui.h"
 
+#include <algorithm>
+
 #include "Display.h"
 #include "Fonts.h"
 #include "Power.h"
@@ -70,29 +72,71 @@ void Ui::showLibrary(bool full) {
         display.show(full);
         return;
     }
+    drawList(int(books_.size()), sel_, [this](int i, String& label, int&, const char*& tag) {
+        label = books_[i].name;
+        tag = books_[i].kind == BookKind::Xtp ? "PDF" : books_[i].kind == BookKind::Epub ? "EPUB" : "TXT";
+    });
+    display.show(full);
+}
+
+// Cut a UTF-8 string until it fits into maxW pixels in the current font.
+static void fitText(String& s, int maxW) {
+    auto& t = display.text();
+    while (s.length() > 1 && t.getUTF8Width(s.c_str()) > maxW) {
+        int n = s.length() - 1;
+        while (n > 0 && (uint8_t(s[n]) & 0xC0) == 0x80) n--;   // keep characters whole
+        s.remove(n);
+    }
+}
+
+void Ui::drawList(int count, int sel, const std::function<void(int, String&, int&, const char*&)>& item) {
+    auto& t = display.text();
+    t.setFont(fonts::ui());
     int perPage = (display.height() - LIST_TOP - 24) / ROW_H;
-    int first = (sel_ / perPage) * perPage;
-    for (int i = first; i < int(books_.size()) && i < first + perPage; i++) {
+    int first = (sel / perPage) * perPage;
+    for (int i = first; i < count && i < first + perPage; i++) {
+        String label;
+        int indent = 0;
+        const char* tag = nullptr;
+        item(i, label, indent, tag);
         int y = LIST_TOP + (i - first) * ROW_H;
-        bool selected = i == sel_;
-        if (selected) {
+        if (i == sel) {
             display.gfx().fillRect(MARGIN_X - 4, y, display.width() - 2 * MARGIN_X + 8, ROW_H - 2, GxEPD_BLACK);
             t.setForegroundColor(GxEPD_WHITE);
         }
-        String name = books_[i].name;
-        const char* tag = books_[i].kind == BookKind::Xtp ? "PDF" : books_[i].kind == BookKind::Epub ? "EPUB" : "TXT";
-        int tagW = t.getUTF8Width(tag) + 8;
-        while (name.length() > 3 && t.getUTF8Width(name.c_str()) > display.width() - 2 * MARGIN_X - tagW)
-            name.remove(name.length() - 1);
-        t.drawUTF8(MARGIN_X, y + ROW_H - 8, name.c_str());
-        t.drawUTF8(display.width() - MARGIN_X - tagW + 8, y + ROW_H - 8, tag);
+        int tagW = tag ? t.getUTF8Width(tag) + 8 : 0;
+        fitText(label, display.width() - 2 * MARGIN_X - tagW - indent);
+        t.drawUTF8(MARGIN_X + indent, y + ROW_H - 8, label.c_str());
+        if (tag) t.drawUTF8(display.width() - MARGIN_X - tagW + 8, y + ROW_H - 8, tag);
         t.setForegroundColor(GxEPD_BLACK);
     }
     char foot[32];
-    snprintf(foot, sizeof foot, "%d / %d", sel_ + 1, int(books_.size()));
+    snprintf(foot, sizeof foot, "%d / %d", sel + 1, count);
     t.setFont(fonts::small());
     t.drawUTF8(MARGIN_X, display.height() - 6, foot);
-    display.show(full);
+}
+
+void Ui::showToc() {
+    screen_ = Screen::Toc;
+    display.setPortrait(true);
+    display.clear();
+    drawHeader("Contents");
+    const auto& toc = book_->toc();
+    drawList(int(toc.size()), tocSel_, [&toc](int i, String& label, int& indent, const char*&) {
+        label = toc[i].title;
+        indent = std::min<int>(toc[i].level, 4) * 14;
+    });
+    display.show(true);
+}
+
+void Ui::actContents() {
+    // preselect the chapter the reader is in
+    const auto& toc = book_->toc();
+    uint32_t pos = book_->position();
+    tocSel_ = 0;
+    for (int i = 0; i < int(toc.size()); i++)
+        if (toc[i].pos <= pos) tocSel_ = i;
+    showToc();
 }
 
 void Ui::showReader(bool full) {
@@ -147,6 +191,7 @@ void Ui::showMenu() {
             menu_.push_back({String("Font size: ") + fonts::sizeName(fs) + "  (smaller)", &Ui::actFontSmaller});
             menu_.push_back({String("Font size: ") + fonts::sizeName(fs) + "  (larger)", &Ui::actFontLarger});
         }
+        if (!book_->toc().empty()) menu_.push_back({"Contents", &Ui::actContents});
         menu_.push_back({"Go to start", &Ui::actToStart});
         menu_.push_back({"Library", &Ui::actLibrary});
     } else {
@@ -274,6 +319,22 @@ void Ui::handle(const ButtonEvent& e) {
                 default: break;
             }
             break;
+        case Screen::Toc: {
+            int n = int(book_->toc().size());
+            switch (e.button) {
+                case Btn::Next: tocSel_ = std::min(n - 1, tocSel_ + (e.longPress ? 10 : 1)); showToc(); break;
+                case Btn::Prev: tocSel_ = std::max(0, tocSel_ - (e.longPress ? 10 : 1)); showToc(); break;
+                case Btn::Ok:
+                    book_->restore(book_->toc()[tocSel_].pos);
+                    storage::savePosition(book_->path(), book_->position());
+                    showReader(true);
+                    break;
+                case Btn::Back: showMenu(); break;
+                case Btn::Menu: showReader(true); break;
+                default: break;
+            }
+            break;
+        }
         case Screen::Message:
             if (storageError_.length()) return;   // nothing to go back to
             if (book_) showReader(true); else showLibrary(true);

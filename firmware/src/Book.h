@@ -2,8 +2,16 @@
 #include <Arduino.h>
 
 #include <memory>
+#include <vector>
 
 #include "Storage.h"
+
+// Table-of-contents entry; `pos` is a value for Book::restore().
+struct TocEntry {
+    uint32_t pos;
+    uint8_t level;   // 0 = top level
+    String title;
+};
 
 // A readable document. Pages are numbered from 0.
 class Book {
@@ -28,6 +36,12 @@ public:
 
     // Font size changed (text books re-paginate).
     virtual void relayout() {}
+
+    // Chapters, if the format has them.
+    virtual const std::vector<TocEntry>& toc() const {
+        static const std::vector<TocEntry> none;
+        return none;
+    }
 
     const String& title() const { return title_; }
     const String& path() const { return path_; }

@@ -1,5 +1,6 @@
 #include "Book.h"
 
+#include "EpubBook.h"
 #include "TxtBook.h"
 #include "XtpBook.h"
 
@@ -8,9 +9,7 @@ std::unique_ptr<Book> openBook(const BookEntry& entry, String& error) {
     switch (entry.kind) {
         case BookKind::Txt: b.reset(new TxtBook()); break;
         case BookKind::Xtp: b.reset(new XtpBook()); break;
-        case BookKind::Epub:
-            error = "EPUB arrives in a later milestone. For now: xtconvert book.epub";
-            return nullptr;
+        case BookKind::Epub: b.reset(new EpubBook()); break;
         default:
             error = "Unsupported file type";
             return nullptr;
