@@ -46,7 +46,8 @@ def write_epub(path: Path, files: dict[str, bytes | str]) -> None:
     with zipfile.ZipFile(path, "w") as z:
         z.writestr(zipfile.ZipInfo("mimetype"), "application/epub+zip", compress_type=zipfile.ZIP_STORED)
         for name, data in files.items():
-            z.writestr(name, data, compress_type=zipfile.ZIP_DEFLATED)
+            info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))   # reproducible output
+            z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED)
 
 
 CONTAINER = """<?xml version="1.0"?>
@@ -206,7 +207,7 @@ def main() -> None:
         for y in range(20):
             gray.putpixel((x, y), 0)
     (img / "gray.png").write_bytes(png_bytes(gray))
-    (img / "gray16.png").write_bytes(png_bytes(gray.convert("I;16")))
+    (img / "gray16.png").write_bytes(png_bytes(Image.eval(gray.convert("I"), lambda v: v * 257).convert("I;16")))
     (img / "rgba.png").write_bytes(png_bytes(pic))
     (img / "palette.png").write_bytes(png_bytes(gray.convert("RGB").quantize(4)))
     rgb = Image.new("RGB", (8, 8), (255, 0, 0))   # red -> luma 76
