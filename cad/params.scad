@@ -123,16 +123,20 @@ plate_z0  = mod_z1 + mod_back_clear;
 plate_z1  = plate_z0 + plate_t;
 
 // ---------- electronics ----------
-// Unexpected Maker FeatherS3 (Feather form factor)
-feather_w = 22.9;
+// Adafruit ESP32-S3 Feather (Adafruit 5477), from Adafruit's board file:
+// 2.5 mm plated holes 2.54 mm in from the USB end, 2.2 mm holes 2.54 mm in
+// from the far end but only ~1.87 mm in from the long edges.
+feather_w = 22.86;
 feather_l = 50.8;
 feather_t = 1.6;
-feather_holes = [[2.54, 2.54], [22.9 - 2.54, 2.54], [2.54, 50.8 - 2.54], [22.9 - 2.54, 50.8 - 2.54]];
+feather_holes = [[2.54, 2.54], [feather_w - 2.54, 2.54],
+                 [1.87, feather_l - 2.54], [feather_w - 1.87, feather_l - 2.54]];
 feather_standoff_h = 1.5;
 feather_x0 = screw_inset + boss_d / 2 + 0.6;   // clear of the bottom-left screw boss
 feather_y0 = wall + tol;          // USB-C at the bottom edge
 feather_z0 = plate_z1 + feather_standoff_h;   // underside of the Feather PCB
 usbc_w = 9.4;  usbc_h = 3.4;      // receptacle on top of the Feather, centred on its short edge
+usbc_overhang = 1.1;              // how far the receptacle sticks out past the board edge
 usbc_z = feather_z0 + feather_t + usbc_h / 2;
 
 // Adafruit 4682 microSD breakout (measure!). Mounted upside-down on standoffs
