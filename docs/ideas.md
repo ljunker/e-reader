@@ -39,7 +39,7 @@ those files on the card.
 | Reading statistics | Minutes per day, pages per week, streak; chart on the upload page | ~5 KB | log on SD | time from NTP when Wi-Fi is on |
 | Highlights + export | Mark sentence by sentence, download as Markdown over Wi-Fi | ~6–10 KB | SD | sentences are easier than words with 5 buttons |
 | Dictionary | Look up a word; sorted index on SD or in the FAT partition, binary search | ~8 KB | 10–50 MB on SD, or up to ~7 MB in flash | built by `xtconvert`; word selection UX is the hard part. With 8 MB PSRAM the index can stay in RAM |
-| Next page in advance | Lay out and draw the next page into a PSRAM frame while the reader reads, so NEXT only refreshes the panel | ~3–5 KB | 15 KB per frame | turns feel instant; also cache the previous page for PREV |
+| Next page in advance | Lay out and draw the next page into a PSRAM frame while the reader reads, so NEXT only refreshes the panel | +1.8 KB (measured) | 3 frames × 15 KB in PSRAM (+30 KB each for `.xtp` gray pages) | **done**; the previous page is kept for PREV, the status line is drawn fresh on each turn |
 | Built-in fonts and patterns in flash | Copy the default `.xff` fonts and `.hyp` files into the FAT partition, so a fresh card works without `/fonts` and `/hyph` | ~5 KB (FFat) | ~0.5–2 MB in flash | update them over Wi-Fi like books |
 | Larger pictures | EPUB pictures up to 4 MP decoded (guards raised for 8 MB PSRAM) | – | – | **done**; PNGs up to ~1300 × 1300 in colour |
 

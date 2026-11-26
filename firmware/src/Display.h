@@ -64,6 +64,20 @@ public:
     void show(bool forceFull = false);
     void requestFullRefresh() { sinceFull_ = 1000; }
 
+    // A frame drawn in advance (next or previous page), kept in PSRAM: the
+    // black-and-white buffer (15 KB), the gray levels if it is a gray frame
+    // (30 KB) and the rotation. Buffers are allocated on first use and reused.
+    struct Frame {
+        uint8_t* bw = nullptr;
+        uint8_t* gray = nullptr;
+        bool isGray = false;
+        uint8_t rotation = 0;
+    };
+    // Copy what has been drawn since clear() into `f`; false if out of memory.
+    bool saveFrame(Frame& f);
+    // Make `f` the frame to show, as if it had just been drawn.
+    void loadFrame(const Frame& f);
+
     // Draw a 4-level gray pixel (0 = black .. 3 = white): a true gray in a
     // gray frame, else a 2×2 ordered dither in black and white.
     inline void grayPixel(int16_t x, int16_t y, uint8_t level) {
@@ -82,6 +96,7 @@ private:
     Epd epd_{Panel(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)};
     TextRenderer text_;
     void setLevel(int16_t x, int16_t y, uint8_t level);
+    uint8_t* buffer();            // GxEPD2's black-and-white frame buffer
     uint8_t* levels_ = nullptr;   // gray frame, 2 bits per pixel in panel order (PSRAM)
     bool grayFrame_ = false;
     int sinceFull_ = 1000;

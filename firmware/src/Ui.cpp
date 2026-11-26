@@ -275,12 +275,42 @@ void Ui::actContents() {
     showToc();
 }
 
+void Ui::composeReader() {
+    uint32_t page = book_->page();
+    int slot = pages_.find(page);
+    if (slot >= 0) {
+        display.loadFrame(frames_[slot]);
+    } else {
+        display.clear();
+        book_->render();
+        keepFrame(page);   // becomes the previous page after NEXT
+    }
+    // The status line is drawn fresh: battery and chapter must be current.
+    if (!book_->fullScreen()) drawStatus();
+}
+
 void Ui::showReader(bool full) {
     screen_ = Screen::Reader;
+    composeReader();
+    display.show(full);
+}
+
+void Ui::keepFrame(uint32_t page) {
+    int slot = pages_.claim(page, book_->page());
+    if (!display.saveFrame(frames_[slot])) pages_.release(slot);
+}
+
+// One page per call, from Ui::poll(), so a button pressed meanwhile waits for
+// one page at most. Leaves the drawing buffer holding that page, not the one
+// on screen: whoever draws next starts with clear() or composeReader().
+void Ui::prerender() {
+    uint32_t current = book_->page(), page;
+    if (!pages_.wanted(current, book_->pageCount(), page)) return;
+    book_->goTo(int32_t(page));
     display.clear();
     book_->render();
-    if (!book_->fullScreen()) drawStatus();
-    display.show(full);
+    keepFrame(page);
+    book_->goTo(int32_t(current));
 }
 
 void Ui::showMessage(const String& title, const String& text) {
@@ -376,6 +406,7 @@ void Ui::openSelected() {
     }
     storage::markOpened(book_->path());
     book_->restore(storage::loadPosition(book_->path()));
+    pages_.clear();
     updateChapters();
     showReader(true);
 }
@@ -388,6 +419,7 @@ void Ui::savePosition() {
 void Ui::closeBook() {
     savePosition();
     book_.reset();
+    pages_.clear();
     display.setPortrait(true);
 }
 
@@ -402,20 +434,23 @@ void Ui::turn(int delta) {
     showReader();
 }
 
+void Ui::relayoutBook() {
+    book_->relayout();
+    pages_.clear();
+    updateChapters();
+    showReader(true);
+}
+
 void Ui::actFontSmaller() {
     uint8_t s = storage::fontSize();
     if (s > 0) storage::setFontSize(s - 1);
-    book_->relayout();
-    updateChapters();
-    showReader(true);
+    relayoutBook();
 }
 
 void Ui::actFontLarger() {
     uint8_t s = storage::fontSize();
     if (s + 1 < fonts::kSizes) storage::setFontSize(s + 1);
-    book_->relayout();
-    updateChapters();
-    showReader(true);
+    relayoutBook();
 }
 
 void Ui::actToStart() {
@@ -436,9 +471,7 @@ void Ui::actFont() {
         showMenu();
         return;
     }
-    book_->relayout();
-    updateChapters();
-    showReader(true);
+    relayoutBook();
 }
 
 void Ui::actRescan() {
@@ -472,9 +505,7 @@ void Ui::actHyphenation() {
         showMenu();
         return;
     }
-    book_->relayout();
-    updateChapters();
-    showReader(true);
+    relayoutBook();
 }
 
 void Ui::back() {
@@ -578,7 +609,11 @@ void Ui::poll() {
         if (usbdrive::ejected() || !usbdrive::hostConnected()) actUsbStop();
         return;
     }
-    if (screen_ != Screen::UsbAsk && storageError_.isEmpty() && usbdrive::takeHostArrived()) showUsbAsk();
+    if (screen_ != Screen::UsbAsk && storageError_.isEmpty() && usbdrive::takeHostArrived()) {
+        showUsbAsk();
+        return;
+    }
+    if (screen_ == Screen::Reader && book_) prerender();
 }
 
 bool Ui::busy() const { return wifishare::active() || usbdrive::active() || screen_ == Screen::UsbAsk; }
@@ -673,7 +708,9 @@ bool Ui::prepareSleep() {
         }
     }
     if (book_) {
+        // the buffer may hold a page drawn in advance: draw the current one again
         if (screen_ != Screen::Reader) showReader(true);
+        else composeReader();
         // small "sleeping" mark in the status line so the device does not look frozen
         if (!book_->fullScreen()) {
             display.gfx().fillRect(display.width() / 2 - 30, display.height() - STATUS_H + 4, 60, STATUS_H - 4, GxEPD_WHITE);
@@ -708,6 +745,7 @@ bool Ui::resume(const char* path, uint32_t position) {
     book_ = openBook(books_[sel_], err);
     if (!book_) return false;
     book_->restore(position);
+    pages_.clear();
     updateChapters();
     screen_ = Screen::Reader;
     return true;
