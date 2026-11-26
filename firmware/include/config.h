@@ -24,3 +24,8 @@
 
 #define BOOKS_DIR "/books"
 #define STATE_DIR "/.reader"
+
+// Wi-Fi upload page: networks to try, one "SSID = password" per line.
+#define WIFI_FILE       "/wifi.txt"
+#define WIFI_CONNECT_MS (20UL * 1000UL)        // give up joining after this
+#define WIFI_IDLE_MS    (10UL * 60UL * 1000UL) // switch Wi-Fi off after this long without a request

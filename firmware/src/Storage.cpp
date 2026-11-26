@@ -11,7 +11,7 @@
 namespace storage {
 
 static Preferences prefs;
-static bool mounted = false;
+static bool mounted_ = false;
 
 bool begin(String& error) {
     prefs.begin("reader", false);
@@ -29,8 +29,18 @@ bool begin(String& error) {
         return false;
     }
     if (!SD_MMC.exists(STATE_DIR)) SD_MMC.mkdir(STATE_DIR);
-    mounted = true;
+    mounted_ = true;
     return true;
+}
+
+bool mounted() { return mounted_; }
+
+void suspend() { mounted_ = false; }
+
+bool remount(String& error) {
+    mounted_ = false;
+    SD_MMC.end();
+    return begin(error);
 }
 
 bool cardPresent() { return PIN_SD_DET < 0 || digitalRead(PIN_SD_DET) == SD_DET_ACTIVE; }
@@ -63,7 +73,7 @@ static void scan(const char* dir, std::vector<BookEntry>& out) {
 
 std::vector<BookEntry> listBooks() {
     std::vector<BookEntry> out;
-    if (!mounted) return out;
+    if (!mounted_) return out;
     scan(BOOKS_DIR, out);
     scan("/", out);
     std::sort(out.begin(), out.end(), [](const BookEntry& a, const BookEntry& b) {
@@ -96,6 +106,14 @@ String cacheFile(const String& bookPath, const char* suffix) {
     char name[24];
     snprintf(name, sizeof name, "/%08lx", (unsigned long)hash(bookPath));
     return String(STATE_DIR) + name + suffix;
+}
+
+void forgetBook(const String& path) {
+    for (const char* suffix : {".tix", ".eix", ".etx", ".eim", ".etc"}) {
+        String f = cacheFile(path, suffix);
+        if (SD_MMC.exists(f)) SD_MMC.remove(f);
+    }
+    if (prefs.isKey(key(path).c_str())) prefs.remove(key(path).c_str());
 }
 
 }  // namespace storage

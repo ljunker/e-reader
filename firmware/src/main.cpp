@@ -7,6 +7,7 @@
 #include "Power.h"
 #include "Storage.h"
 #include "Ui.h"
+#include "UsbDrive.h"
 #include "config.h"
 
 // Survives deep sleep: which book was open and where.
@@ -34,6 +35,7 @@ void setup() {
     display.begin(!fromSleep);
     String err;
     storage::begin(err);
+    usbdrive::begin();
 
     if (fromSleep && rtcPath[0] && err.isEmpty() && ui.resume(rtcPath, rtcPos)) {
         // The panel still shows the page we fell asleep on. A page-turn button
@@ -52,6 +54,8 @@ void loop() {
         lastActivity = millis();
         ui.handle(e);
     }
+    ui.poll();
+    if (ui.busy()) lastActivity = millis();   // no sleep while Wi-Fi or the USB drive is on
     if (millis() - lastActivity > SLEEP_AFTER_MS && !buttons.anyDown()) goToSleep();
     delay(5);
 }
