@@ -83,5 +83,6 @@ module chassis() {
 
 // In assembly coordinates; flip for printing in the Makefile (-D print=true).
 print = false;
-if (print) translate([0, 0, plate_z1]) mirror([0, 0, 1]) chassis();
+// Rotated, not mirrored, so the printed plate is not the mirror image of the model.
+if (print) translate([case_w, 0, plate_z1]) rotate([0, 180, 0]) chassis();
 else chassis();
