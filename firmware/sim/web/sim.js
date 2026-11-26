@@ -7,6 +7,7 @@ const $ = (s) => document.querySelector(s);
 const PANEL_W = 400, PANEL_H = 300, STRIDE = PANEL_W / 8;
 const EXT1 = 3;                       // ESP_SLEEP_WAKEUP_EXT1
 const SAMPLES = ['sample.epub', 'sample2.epub', 'drm.epub'];
+const HYPHENATION = ['de.hyp', 'en.hyp'];   // sdcard/hyph in the repository
 const WIFI_SAMPLE = '# One network per line: SSID = key (empty for an open network)\nSimulator WLAN =\n';
 const SAMPLE_TXT = `Welcome to the e-reader simulator
 
@@ -290,7 +291,9 @@ const CARD = '/sdcard';
 
 async function seedCard(inst) {
   const FS = inst.FS;
-  if (FS.readdir(CARD).length > 2) return;   // only . and ..
+  const empty = FS.readdir(CARD).length <= 2;   // only . and ..
+  await seedHyphenation(FS);
+  if (!empty) return;
   log('First start: putting sample books and a wifi.txt on the card.');
   FS.mkdir(CARD + '/books');
   for (const name of SAMPLES) {
@@ -301,6 +304,18 @@ async function seedCard(inst) {
   }
   FS.writeFile(`${CARD}/books/Simulator.txt`, SAMPLE_TXT);
   FS.writeFile(`${CARD}/wifi.txt`, WIFI_SAMPLE);
+}
+
+// Hyphenation patterns, also on cards from before they existed.
+async function seedHyphenation(FS) {
+  if (FS.analyzePath(CARD + '/hyph').exists) return;
+  FS.mkdir(CARD + '/hyph');
+  for (const name of HYPHENATION) {
+    try {
+      const r = await fetch('samples/' + name);
+      if (r.ok) FS.writeFile(`${CARD}/hyph/${name}`, new Uint8Array(await r.arrayBuffer()));
+    } catch { /* offline: no hyphenation */ }
+  }
 }
 
 let syncing = null, syncAgain = false, syncTimer = 0;

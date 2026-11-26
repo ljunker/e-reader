@@ -3,6 +3,7 @@
 
 #include "Book.h"
 #include "EpubCache.h"
+#include "Hyphen.h"
 #include "RichLayout.h"
 
 // EPUB books. On first open the EPUB is converted into cache files on the
@@ -34,6 +35,7 @@ private:
     rich::Layout makeLayout();
     uint32_t readWindow(uint32_t pos);
     void drawImage(const rich::Line& line);
+    void loadHyphenation();
 
     String etxPath_, eimPath_, etcPath_;
     uint32_t etxSize_ = 0;
@@ -41,4 +43,7 @@ private:
     std::vector<Start> starts_;
     std::vector<epub::ImageInfo> images_;
     std::vector<TocEntry> toc_;
+    String lang_;                 // "de", "en" or "" (from dc:language, else guessed)
+    hyph::Hyphenator hyph_;
+    uint32_t hyphId_ = 0;         // hyphenation::load(); part of the index cache key
 };

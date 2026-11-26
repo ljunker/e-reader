@@ -132,6 +132,9 @@ def copy_web(target=None, source=None, env=env):
     os.makedirs(samples, exist_ok=True)
     for name in ("sample.epub", "sample2.epub", "drm.epub"):
         shutil.copy2(os.path.join(PROJECT, "test", "fixtures", name), os.path.join(samples, name))
+    hyph = os.path.join(PROJECT, "..", "sdcard", "hyph")
+    for name in ("de.hyp", "en.hyp"):
+        shutil.copy2(os.path.join(hyph, name), os.path.join(samples, name))
     print("Simulator page: %s" % os.path.join(WEB_OUT, "index.html"))
 
 
