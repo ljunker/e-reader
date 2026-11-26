@@ -143,7 +143,7 @@ def serve(target, source, env):
     copy_web()
     port = os.environ.get("SIM_PORT", "8000")
     print("Simulator on http://localhost:%s/  (Ctrl+C stops)" % port)
-    subprocess.call([sys.executable, "-m", "http.server", port, "--bind", "127.0.0.1"], cwd=WEB_OUT)
+    subprocess.call([sys.executable, os.path.join(SIM, "serve.py"), port, WEB_OUT])
 
 
 env.AddCustomTarget(
