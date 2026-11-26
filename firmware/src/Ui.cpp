@@ -21,8 +21,9 @@ static constexpr int BOOK_ROW_H = 66;   // library row with a cover thumbnail
 
 static void batteryLabel(char* out, size_t n) {
     int p = power::batteryPercent();
-    if (p < 0) snprintf(out, n, "--%%");
-    else snprintf(out, n, "%d%%", p);
+    const char* usb = power::usbPowered() ? "+" : "";   // + while USB-C supplies power (charging)
+    if (p < 0) snprintf(out, n, "--%%%s", usb);
+    else snprintf(out, n, "%d%%%s", p, usb);
 }
 
 // Cut a UTF-8 string until it fits into maxW pixels in the current font.

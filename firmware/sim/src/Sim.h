@@ -7,6 +7,7 @@ uint32_t nowMs();             // millis() of this boot
 bool cardInserted();
 bool wifiInRange();
 bool usbComputer();           // cable to a computer that enumerated us
+bool usbPowered();   // any cable: drives the VBUS sense pin
 void fsChanged();             // ask the page to persist /sdcard and /nvs soon
 }  // namespace sim
 

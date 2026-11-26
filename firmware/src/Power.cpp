@@ -15,11 +15,10 @@ namespace power {
 
 using namespace fuelgauge;
 
-enum class Gauge { None, Max17048, Lc709203f };
-static Gauge gauge = Gauge::None;
+static bool gaugeFound = false;
 
 // Outputs that must stay low through deep sleep (the pads float otherwise).
-static const int kHeldLow[] = {PIN_I2C_POWER, PIN_NEOPIXEL_POWER, PIN_EPD_PWR};
+static const int kHeldLow[] = {PIN_LDO2, PIN_LED, PIN_EPD_PWR};
 
 static bool present(uint8_t addr) {
     Wire.beginTransmission(addr);
@@ -42,61 +41,36 @@ static bool maxRead(uint8_t reg, uint16_t& v) {
     return true;
 }
 
-static bool lcRead(uint8_t reg, uint16_t& v) {
-    uint8_t b[3];
-    if (!readRaw(kLc709203fAddr, reg, b, 3)) return false;
-    const uint8_t bus[] = {uint8_t(kLc709203fAddr << 1), reg, uint8_t(kLc709203fAddr << 1 | 1), b[0], b[1]};
-    if (crc8(bus, sizeof bus) != b[2]) return false;
-    v = uint16_t(b[1] << 8 | b[0]);
-    return true;
-}
-
-static bool lcWrite(uint8_t reg, uint16_t v) {
-    const uint8_t bus[] = {uint8_t(kLc709203fAddr << 1), reg, uint8_t(v), uint8_t(v >> 8)};
-    Wire.beginTransmission(kLc709203fAddr);
-    Wire.write(bus + 1, 3);
-    Wire.write(crc8(bus, sizeof bus));
-    return Wire.endTransmission() == 0;
-}
-
 void begin() {
     for (int pin : kHeldLow)
         if (pin >= 0) gpio_hold_dis(gpio_num_t(pin));
     gpio_deep_sleep_hold_dis();
 
-    pinMode(PIN_NEOPIXEL_POWER, OUTPUT);
-    digitalWrite(PIN_NEOPIXEL_POWER, LOW);
-    pinMode(PIN_I2C_POWER, OUTPUT);
-    digitalWrite(PIN_I2C_POWER, HIGH);   // the I2C pull-ups hang on this rail
-    delay(5);
-    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, 100000);
+    pinMode(PIN_LDO2, OUTPUT);
+    digitalWrite(PIN_LDO2, LOW);        // RGB LED + second STEMMA QT off
+    pinMode(PIN_LED, OUTPUT);
+    digitalWrite(PIN_LED, LOW);
+    pinMode(PIN_RF_SWITCH, OUTPUT);
+    digitalWrite(PIN_RF_SWITCH, LOW);   // on-board antenna
+    pinMode(PIN_VBUS_SENSE, INPUT);
 
-    if (present(kMax17048Addr)) {
-        gauge = Gauge::Max17048;
-    } else if (present(kLc709203fAddr) && lcWrite(kLcRegPowerMode, 1)) {
-        gauge = Gauge::Lc709203f;
-    } else {
-        gauge = Gauge::None;
-        log_w("no battery monitor found on I2C");
-    }
+    // The gauge and its pull-ups sit on LDO1, which is always on.
+    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, 100000);
+    gaugeFound = present(kMax17048Addr);
+    if (!gaugeFound) log_w("no MAX17048 fuel gauge found on I2C");
 }
 
 int batteryMv() {
     uint16_t v;
-    switch (gauge) {
-        case Gauge::Max17048: return maxRead(kMaxRegVcell, v) ? max17048Millivolts(v) : -1;
-        case Gauge::Lc709203f: return lcRead(kLcRegCellVoltage, v) ? int(v) : -1;
-        default: return -1;
-    }
+    return gaugeFound && maxRead(kMaxRegVcell, v) ? max17048Millivolts(v) : -1;
 }
 
 int batteryPercent() {
     uint16_t v;
-    if (gauge == Gauge::Max17048) return maxRead(kMaxRegSoc, v) ? max17048Percent(v) : -1;
-    // The LC709203F's own estimate needs the pack configured; the voltage is enough here.
-    int mv = batteryMv();
-    return mv < 0 ? -1 : linearPercent(mv, VBAT_EMPTY_MV, VBAT_FULL_MV);
+    return gaugeFound && maxRead(kMaxRegSoc, v) ? max17048Percent(v) : -1;
 }
+
+bool usbPowered() { return digitalRead(PIN_VBUS_SENSE) == HIGH; }
 
 void deepSleep() {
     display.powerOff();
