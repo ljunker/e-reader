@@ -10,7 +10,7 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 |---|---|
 | **Formats** | `.txt`; **EPUB** laid out on the device (bold/italic, headings, pictures, table of contents); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
 | **Controls** | PREV / NEXT on the grip edge (left by default, `left_handed` in `cad/params.scad`), MENU / OK / BACK below the screen; long press jumps 10 pages |
-| **Getting books on** | microSD card now; Wi‑Fi upload page and USB mass storage (milestone 6) |
+| **Getting books on** | microSD card, Wi‑Fi upload page in the browser, or USB drive over USB‑C |
 | **Case** | ~95 × 137 × 17 mm, parametric OpenSCAD, fits a Bambu A1 mini |
 
 ## Repository
@@ -56,6 +56,26 @@ and the table of contents from the nav document or the NCX.
 Not supported: DRM-protected books (the reader says so), GIF/SVG and progressive JPEG pictures (left out),
 characters outside Latin-1 (shown as the nearest Latin letter or `?` until the TTF fonts arrive), footnote pop-ups.
 
+## Wi‑Fi upload & USB drive
+**Wi‑Fi:** put a `wifi.txt` in the top folder of the card, one network per line:
+```
+# SSID = password   (lines starting with # are ignored)
+Zuhause = geheim123
+Büro WLAN = pass=word
+Gartenhaus =
+```
+The line is split at the first `=`, so the password may contain `=` or `#`; leave it empty for an open network.
+MENU → **Wi‑Fi upload** joins the strongest of these networks and shows the address.
+Open `http://ereader.local/` (or the IP shown) in a browser on the same network to upload, replace or delete books;
+the screen counts the files that arrive. BACK switches Wi‑Fi off, and so do 10 minutes without a request.
+
+**USB:** plug the reader into a computer with the USB‑C cable. It asks whether to show the card as a USB drive
+(OK) or to keep reading (BACK); MENU → **USB drive** offers it again. Copy books into `books/`, eject the drive,
+and the reader returns to the library. A charger alone never triggers the question.
+
+The firmware needs one large app partition for Wi‑Fi (`tinyuf2-partitions-4MB-noota.csv`); the first
+`pio run -t upload` after updating rewrites the partition table. Saved reading positions stay.
+
 ## Status / roadmap
 - [x] Hardware design, wiring, BOM
 - [x] Parametric case with collision check
@@ -65,5 +85,5 @@ characters outside Latin-1 (shown as the nearest Latin letter or `?` until the T
 - [ ] Anti-aliased fonts generated from TTFs, hyphenation
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
-- [ ] Wi‑Fi upload page, USB mass storage
+- [x] Wi‑Fi upload page, USB mass storage
 - [ ] Optional KiCad carrier PCB (draft in tag `carrier-pcb-draft`)
