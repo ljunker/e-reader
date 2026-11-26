@@ -18,11 +18,12 @@ struct Gray {
 enum class Format { Unknown, Png, Jpeg, Gif };
 Format sniff(const uint8_t* d, size_t n);
 
-// Memory guards for the device (8 MB PSRAM): decoded gray pixels, and the
-// unfiltered PNG rows. JPEGs count after scaled decoding, so large photos
-// still work; very large PNGs are skipped.
-constexpr size_t kMaxPixels = 4u * 1000 * 1000;
-constexpr size_t kMaxRawBytes = 5u * 1000 * 1000;
+// Memory guards for the device (2 MB PSRAM, shared with the file data):
+// decoded gray pixels, and the unfiltered PNG rows. JPEGs count after scaled
+// decoding, so large photos still work; PNGs above roughly 600 × 600 in
+// colour are skipped.
+constexpr size_t kMaxPixels = 800u * 1000;
+constexpr size_t kMaxRawBytes = 1100u * 1000;
 
 // PNG: all colour types and bit depths, not interlaced. Transparency is
 // composed onto white.

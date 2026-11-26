@@ -14,12 +14,18 @@ static constexpr int LIST_TOP = 40;
 
 // ---------- drawing helpers ----------
 
+static void batteryLabel(char* out, size_t n) {
+    int p = power::batteryPercent();
+    if (p < 0) snprintf(out, n, "--%%");
+    else snprintf(out, n, "%d%%", p);
+}
+
 void Ui::drawHeader(const char* title) {
     auto& t = display.text();
     t.setFont(fonts::uiBold());
     t.drawUTF8(MARGIN_X, 24, title);
     char bat[8];
-    snprintf(bat, sizeof bat, "%d%%", power::batteryPercent());
+    batteryLabel(bat, sizeof bat);
     t.setFont(fonts::small());
     t.drawUTF8(display.width() - MARGIN_X - t.getUTF8Width(bat), 22, bat);
     display.gfx().drawFastHLine(MARGIN_X, 31, display.width() - 2 * MARGIN_X, GxEPD_BLACK);
@@ -29,10 +35,10 @@ void Ui::drawStatus() {
     auto& t = display.text();
     t.setFont(fonts::small());
     int y = display.height() - 5;
-    char right[32];
+    char right[32], bat[8];
+    batteryLabel(bat, sizeof bat);
     uint32_t n = book_->pageCount();
-    snprintf(right, sizeof right, "%lu / %lu  %d%%", (unsigned long)book_->page() + 1, (unsigned long)n,
-             power::batteryPercent());
+    snprintf(right, sizeof right, "%lu / %lu  %s", (unsigned long)book_->page() + 1, (unsigned long)n, bat);
     int rw = t.getUTF8Width(right);
     t.drawUTF8(display.width() - MARGIN_X - rw, y, right);
     // title, cut to the space that is left

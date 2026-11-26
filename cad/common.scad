@@ -54,7 +54,7 @@ module display_dummy() {
 module feather_dummy() {
     handed() {
         color("royalblue") translate([feather_x0, feather_y0, feather_z0]) cube([feather_w, feather_l, feather_t]);
-        color("silver") translate([feather_x0 + feather_w / 2 - usbc_w / 2, feather_y0 - 0.5, feather_z0 + feather_t]) cube([usbc_w, 7.5, usbc_h]);
+        color("silver") translate([feather_x0 + feather_w / 2 - usbc_w / 2, feather_y0 - usbc_overhang, feather_z0 + feather_t]) cube([usbc_w, 7.5, usbc_h]);
     }
 }
 

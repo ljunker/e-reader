@@ -1,5 +1,5 @@
 // Chassis plate: sits behind the display and presses it into the bezel through
-// small feet; carries the FeatherS3 and the battery on its back side.
+// small feet; carries the Feather and the battery on its back side.
 // The back shell's pegs push the plate forward, so it needs no screws.
 // Print flat (back side up, as modelled after the final rotate), no supports.
 include <common.scad>
