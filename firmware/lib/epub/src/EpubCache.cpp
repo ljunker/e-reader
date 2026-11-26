@@ -512,6 +512,9 @@ bool buildCache(zip::Archive& zip, const Package& pkg, uint32_t epubSize, io::Wr
     std::string title = pkg.title.substr(0, 1000);
     put16(out, uint16_t(title.size()));
     out += title;
+    std::string lang = pkg.language.substr(0, 32);
+    out += char(lang.size());
+    out += lang;
     put32(out, uint32_t(toc.size()));
     for (const auto& t : toc) {
         std::string s = t.title;
@@ -537,7 +540,7 @@ bool checkEtxHeader(const uint8_t h[kEtxHeaderSize], uint32_t epubSize) {
     return memcmp(h, "ETX1", 4) == 0 && le32(h + 4) == kCacheVersion && le32(h + 8) == epubSize;
 }
 
-bool readToc(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::string& title,
+bool readToc(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::string& title, std::string& language,
              std::vector<TocItem>& out) {
     out.clear();
     if (fileSize < 18 || fileSize > (4u << 20)) return false;
@@ -547,9 +550,13 @@ bool readToc(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::str
     size_t p = 12;
     uint16_t tl = le16(&d[p]);
     p += 2;
-    if (p + tl + 4 > fileSize) return false;
+    if (p + tl + 1 > fileSize) return false;
     title.assign((const char*)&d[p], tl);
     p += tl;
+    uint8_t ll = d[p++];
+    if (p + ll + 4 > fileSize) return false;
+    language.assign((const char*)&d[p], ll);
+    p += ll;
     uint32_t count = le32(&d[p]);
     p += 4;
     for (uint32_t i = 0; i < count; i++) {

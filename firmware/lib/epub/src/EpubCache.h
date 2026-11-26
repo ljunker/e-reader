@@ -8,6 +8,7 @@
 //         (u32 table offset, u32 count, u32 EPUB size, "EIM1").
 //         A picture that could not be decoded has w = h = 0.
 //   .etc  "ETC1", u32 version, u32 EPUB size, u16 title length, title,
+//         u8 language length, language (dc:language, e.g. "de-DE"),
 //         u32 count, count × (u32 position, u8 level, u8 length, title).
 //         Written last: when it is valid, the conversion completed.
 //
@@ -25,7 +26,7 @@
 
 namespace epub {
 
-constexpr uint32_t kCacheVersion = 1;
+constexpr uint32_t kCacheVersion = 2;   // 2: language in .etc
 constexpr uint32_t kEtxHeaderSize = 16;
 
 struct TocItem {
@@ -50,7 +51,7 @@ bool buildCache(zip::Archive& zip, const Package& pkg, uint32_t epubSize, io::Wr
                 io::Writer& etc, const BuildOptions& opt, std::string& error);
 
 bool checkEtxHeader(const uint8_t header[kEtxHeaderSize], uint32_t epubSize);
-bool readToc(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::string& title,
+bool readToc(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::string& title, std::string& language,
              std::vector<TocItem>& out);
 bool readImageTable(io::ByteSource& src, uint32_t fileSize, uint32_t epubSize, std::vector<ImageInfo>& out);
 
