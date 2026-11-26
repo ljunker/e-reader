@@ -15,7 +15,7 @@
 <text x='108' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
 <polyline points='132,200 132,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
 <polyline points='84,152 84,360 482,360' fill='none' stroke='#ff7f0e' stroke-width='4' stroke-linejoin='round'/>
-<text x='490' y='365' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>11  (BACK)</text>
+<text x='490' y='365' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>0  (BACK)</text>
 <rect x='206' y='146' width='60' height='60' rx='4' fill='#222' stroke='#000'/>
 <circle cx='236' cy='176' r='16' fill='#555' stroke='#000'/>
 <circle cx='212' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
@@ -26,7 +26,7 @@
 <text x='236' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
 <polyline points='260,200 260,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
 <polyline points='212,152 212,382 482,382' fill='none' stroke='#2ca02c' stroke-width='4' stroke-linejoin='round'/>
-<text x='490' y='387' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>10  (OK)</text>
+<text x='490' y='387' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>1  (OK)</text>
 <rect x='334' y='146' width='60' height='60' rx='4' fill='#222' stroke='#000'/>
 <circle cx='364' cy='176' r='16' fill='#555' stroke='#000'/>
 <circle cx='340' cy='152' r='4' fill='#d9b44a' stroke='#333'/>
@@ -37,7 +37,7 @@
 <text x='364' y='230' font-size='12' text-anchor='middle' font-weight='normal' fill='#555'></text>
 <polyline points='388,200 388,218' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
 <polyline points='340,152 340,404 482,404' fill='none' stroke='#1f77b4' stroke-width='4' stroke-linejoin='round'/>
-<text x='490' y='409' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>9  (MENU)</text>
+<text x='490' y='409' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>7  (MENU)</text>
 <polyline points='132,218 388,218 388,218 452,218 452,430 482,430' fill='none' stroke='#111111' stroke-width='4' stroke-linejoin='round'/>
 <text x='490' y='435' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>GND</text>
 <text x='60' y='480' font-size='13' text-anchor='start' font-weight='normal' fill='#444'>Seen from the front the order is MENU · OK · BACK (left to right).</text>
@@ -48,13 +48,13 @@
 <circle cx='741' cy='180' r='10' fill='#555'/>
 <text x='710' y='185' font-size='14' text-anchor='end' font-weight='bold' fill='#222'>PREV</text>
 <polyline points='762,168 830,168' fill='none' stroke='#d62728' stroke-width='4' stroke-linejoin='round'/>
-<text x='836' y='173' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>5</text>
+<text x='836' y='173' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>11</text>
 <polyline points='762,192 790,192' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
 <rect x='723' y='310.20000000000005' width='36' height='36' rx='3' fill='#222'/>
 <circle cx='741' cy='328.20000000000005' r='10' fill='#555'/>
 <text x='710' y='333.20000000000005' font-size='14' text-anchor='end' font-weight='bold' fill='#222'>NEXT</text>
 <polyline points='762,316.20000000000005 830,316.20000000000005' fill='none' stroke='#8c4fbf' stroke-width='4' stroke-linejoin='round'/>
-<text x='836' y='321.20000000000005' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>6</text>
+<text x='836' y='321.20000000000005' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>10</text>
 <polyline points='762,340.20000000000005 790,340.20000000000005' fill='none' stroke='#111111' stroke-width='3' stroke-linejoin='round'/>
 <polyline points='790,192 790,410 830,410' fill='none' stroke='#111111' stroke-width='4' stroke-linejoin='round'/>
 <text x='836' y='415' font-size='14' text-anchor='start' font-weight='bold' fill='#222'>GND</text>

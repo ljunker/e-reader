@@ -1,7 +1,7 @@
 # DIY e-reader
 
 A pocket e-reader built around a **Waveshare 4.2" e-Paper Module V2** (400 × 300, black/white + 4 grays),
-an **ESP32-S3** (Adafruit ESP32-S3 Feather, 4 MB flash / 2 MB PSRAM), a microSD card and a 3D-printed case.
+an **ESP32-S3** (Unexpected Maker FeatherS3[D], 16 MB flash / 8 MB PSRAM), a microSD card and a 3D-printed case.
 It reads books in portrait at 300 × 400, sleeps between page turns and runs for weeks on a 1500–2000 mAh LiPo.
 
 ![Assembly](cad/renders/assembly.png)
@@ -110,15 +110,15 @@ the screen counts the files that arrive. BACK switches Wi‑Fi off, and so do 10
 (OK) or to keep reading (BACK); MENU → **USB drive** offers it again. Copy books into `books/`, eject the drive,
 and the reader returns to the library. A charger alone never triggers the question.
 
-The firmware needs one large app partition for Wi‑Fi (`tinyuf2-partitions-4MB-noota.csv`); the first
-`pio run -t upload` after updating rewrites the partition table. Saved reading positions stay.
+The firmware uses its own partition table (`firmware/partitions-16MB.csv`: two 4 MB app slots, TinyUF2, FAT); the first
+`pio run -t upload` after updating rewrites it. Saved reading positions stay.
 
 ## Status / roadmap
 - [x] Hardware design, wiring, BOM
 - [x] Parametric case with collision check
 - [x] PDF/comic converter and `.xtp` format
 - [x] Firmware: display, buttons, SD, deep sleep + wake on any button, library, TXT reader with justified text and cached pagination, `.xtp` viewer, font sizes, saved positions
-- [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery monitor)
+- [ ] Bring-up on real hardware (FeatherS3[D] pin check, Rev2.2 `PWR` pin, rotation, fuel gauge, card detect polarity)
 - [x] Fonts generated from TTFs (`xtconvert font`, loaded from the card), shown in black and white
 - [x] Hyphenation (Liang patterns, German and English)
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)

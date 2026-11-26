@@ -19,32 +19,32 @@ Steps 1–7 of section 4 are seen **from the back**, because the reader is built
 Wire everything with jumper wires first. The pin names are the same as in [wiring.md](../hardware/wiring.md)
 and [`firmware/include/pins.h`](../firmware/include/pins.h).
 
-> ⚠️ Check every pin against Adafruit's pinout diagram for the ESP32-S3 Feather before soldering.
+> ⚠️ Check every pin against the FeatherS3[D] pinout card ([feathers3.io](https://feathers3.io)) before soldering.
 
 **Display:**
 
-![Display to Feather wiring](img/wiring-display.svg)
+![Display to FeatherS3[D] wiring](img/wiring-display.svg)
 
-1. Wire the display to the Feather as shown above.
+1. Wire the display to the board as shown above.
 2. `cd firmware && pio run -t upload && pio device monitor`
-   (if the upload does not find the board: hold BOOT, tap RESET, release BOOT, try again)
+   (if the upload does not find the board: hold BOOT, tap RESET, release BOOT, try again; once the buttons are wired, BACK works as BOOT)
 3. Without an SD card you should see **"Storage: No microSD card"** on the display. That proves SPI, `PWR`, `BUSY` and rotation.
    - Upside down? Change `DISPLAY_ROTATION_PORTRAIT` in `firmware/include/config.h` (1 ↔ 3).
    - Nothing happens and the log shows "Busy Timeout": check `BUSY` and `PWR` (Rev2.2 needs `PWR` high).
 
 **microSD breakout:**
 
-![microSD breakout to Feather wiring](img/wiring-sd.svg)
+![microSD breakout to FeatherS3[D] wiring](img/wiring-sd.svg)
 
 4. Add the SD breakout and the buttons (section 3), then put a card with `/books/*.txt` in it. The library should appear.
-   The breakout's DET pin stays unconnected (no pin left on the Feather).
+   The breakout's DET pin goes to pin 3: without a card the reader says "No microSD card", with an unreadable one "Cannot read the microSD card".
 
 **Power:**
 
-![Battery, slide switch and Feather](img/wiring-power.svg)
+![Battery, slide switch and FeatherS3[D]](img/wiring-power.svg)
 
-5. Plug in the battery. The % in the header comes from the Feather's battery monitor; `--%` means the firmware found none (check the serial log).
-   The red LED on the Feather is lit while the reader is awake: it shares pin 13 with the display's `PWR` line.
+5. Plug in the battery. The % in the header comes from the board's MAX17048 fuel gauge; `--%` means the firmware found none (check the serial log).
+   A `+` after the percentage means USB-C supplies power (pin 34 senses 5 V).
 
 ---
 
@@ -53,7 +53,7 @@ and [`firmware/include/pins.h`](../firmware/include/pins.h).
 - Remove (desolder or clip) the straight pin header on the back if it is fitted, and solder thin silicone wires
   directly to the pads. Keep the side-entry connector only if `mod_back_clear` in `params.scad` allows it.
 - Stick 1 mm foam tape on the back of the board where the chassis feet press (near the corners).
-- Leave the wires about 12 cm long; they run through the opening in the chassis plate to the Feather.
+- Leave the wires about 12 cm long; they run through the opening in the chassis plate to the board.
 
 ---
 
@@ -109,14 +109,14 @@ and [`firmware/include/pins.h`](../firmware/include/pins.h).
 
 **Check:** the active area is centred in the window (the fit test from [printing.md](printing.md) told you this already).
 
-### Step 5 – Chassis, Feather and battery
+### Step 5 – Chassis, FeatherS3[D] and battery
 
-![Step 5: chassis plate with Feather and battery](img/step-5.png)
+![Step 5: chassis plate with FeatherS3[D] and battery](img/step-5.png)
 
-1. Screw the Feather onto the chassis standoffs (4 × M2 × 4 self-tapping), **USB-C towards the bottom edge**.
-2. Put the battery into its pocket, leads towards the Feather. Kapton tape between battery and anything sharp.
+1. Screw the FeatherS3[D] onto the chassis standoffs (3 × M2 × 4 self-tapping; the board has holes at both USB-C corners and one at the far end), **USB-C towards the bottom edge**.
+2. Put the battery into its pocket, leads towards the board. Kapton tape between battery and anything sharp.
 3. Wire everything (sections 1 and 3); route the wires through the slots in the plate.
-4. Place the chassis onto the display: its feet rest on the foam tape, the tongue under the Feather rests on the front face.
+4. Place the chassis onto the display: its feet rest on the foam tape, the tongue under the board rests on the front face.
 
 **Check:** no wire lies under a foot or between the plate and the display.
 
