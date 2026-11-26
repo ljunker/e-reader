@@ -34,12 +34,12 @@ static bool loadCard(Hyphenator& h, const char* name) {
 
 // The word with '-' at every break, '|' where the word already has a '-'.
 static std::string show(const Hyphenator& h, const char* w) {
-    std::vector<uint16_t> b;
-    h.breaks(w, strlen(w), b);
+    uint16_t b[32];
+    int nb = h.breaks(w, strlen(w), b, 32);
     std::string out;
-    size_t k = 0;
+    int k = 0;
     for (size_t i = 0; w[i]; i++) {
-        if (k < b.size() && b[k] == i) {
+        if (k < nb && b[k] == i) {
             out += i > 0 && w[i - 1] == '-' ? "|" : "-";
             k++;
         }
@@ -100,6 +100,18 @@ void test_explicit_hyphens() {
     TEST_ASSERT_EQUAL_STRING("Silbentrennung", show(none, "Silbentrennung").c_str());
 }
 
+void test_breaks_respects_max_and_unload() {
+    uint16_t b[2];
+    TEST_ASSERT_EQUAL(2, de.breaks("Silbentrennung", 14, b, 2));
+    TEST_ASSERT_EQUAL(3, b[0]);
+    TEST_ASSERT_EQUAL(6, b[1]);
+    Hyphenator h;
+    TEST_ASSERT_TRUE(loadCard(h, "en.hyp"));
+    h.unload();
+    TEST_ASSERT_FALSE(h.loaded());
+    TEST_ASSERT_EQUAL(0, h.breaks("hyphenation", 11, b, 2));
+}
+
 void test_language() {
     TEST_ASSERT_EQUAL_STRING("de", normalizeLanguage("de-DE"));
     TEST_ASSERT_EQUAL_STRING("de", normalizeLanguage("DE"));
@@ -124,6 +136,7 @@ int main(int, char**) {
     RUN_TEST(test_english_and_exceptions);
     RUN_TEST(test_punctuation_and_short_words);
     RUN_TEST(test_explicit_hyphens);
+    RUN_TEST(test_breaks_respects_max_and_unload);
     RUN_TEST(test_language);
     return UNITY_END();
 }
