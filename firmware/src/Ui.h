@@ -6,6 +6,8 @@
 #include "Book.h"
 #include "Buttons.h"
 #include "Covers.h"
+#include "Display.h"
+#include "PageCache.h"
 #include "Storage.h"
 
 // Screens: library list, reading view, menu overlay, message.
@@ -34,6 +36,13 @@ private:
 
     void showLibrary(bool full = false);
     void showReader(bool full = false);
+    // The current page with its status line in the buffer, not shown yet.
+    void composeReader();
+    // Draw the next (then the previous) page into a spare frame while the
+    // reader reads, so the page turn only has to refresh the panel.
+    void prerender();
+    // Keep what was just drawn (the book page alone) as the frame of `page`.
+    void keepFrame(uint32_t page);
     void showMenu();
     void showMessage(const String& title, const String& text);
     void showToc();
@@ -59,6 +68,8 @@ private:
     void reloadBooks(const String& selectPath);
     // After opening or re-paginating: first page of every chapter.
     void updateChapters();
+    // Font, font size or hyphenation changed: lay the book out again.
+    void relayoutBook();
 
     // menu actions
     void actFontSmaller();
@@ -87,6 +98,8 @@ private:
     int tocSel_ = 0;
     uint32_t turnsSinceSave_ = 0;
     std::vector<uint32_t> chapterPages_;   // parallel to book_->toc()
+    pagecache::Slots pages_;                // which page each frame holds
+    Display::Frame frames_[pagecache::Slots::kSlots];
     bool sleepRequested_ = false;
     String storageError_;
 };
