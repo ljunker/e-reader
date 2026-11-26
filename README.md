@@ -1,7 +1,7 @@
 # DIY e-reader
 
 A pocket e-reader built around a **Waveshare 4.2" e-Paper Module V2** (400 × 300, black/white + 4 grays),
-an **ESP32-S3** (Unexpected Maker FeatherS3), a microSD card and a 3D-printed case.
+an **ESP32-S3** (Adafruit ESP32-S3 Feather, 4 MB flash / 2 MB PSRAM), a microSD card and a 3D-printed case.
 It reads books in portrait at 300 × 400, sleeps between page turns and runs for weeks on a 1500–2000 mAh LiPo.
 
 ![Assembly](cad/renders/assembly.png)
@@ -61,7 +61,7 @@ characters outside Latin-1 (shown as the nearest Latin letter or `?` until the T
 - [x] Parametric case with collision check
 - [x] PDF/comic converter and `.xtp` format
 - [x] Firmware: display, buttons, SD, deep sleep + wake on any button, library, TXT reader with justified text and cached pagination, `.xtp` viewer, font sizes, saved positions
-- [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery scale)
+- [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery monitor)
 - [ ] Anti-aliased fonts generated from TTFs, hyphenation
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
