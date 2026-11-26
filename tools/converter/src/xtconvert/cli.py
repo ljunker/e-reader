@@ -1,4 +1,6 @@
-"""Command line: xtconvert book.pdf [-o book.xtp] [--mode fit|width|landscape] ..."""
+"""Command line: xtconvert book.pdf [-o book.xtp] [--mode fit|width|landscape] ...
+
+xtconvert hyph patterns.tex -o de.hyp builds hyphenation patterns for the SD card (see hyph.py)."""
 from __future__ import annotations
 
 import argparse
@@ -34,6 +36,10 @@ def convert(src: Path, dst: Path, opts: Options, title: str | None = None, previ
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["hyph"]:
+        from . import hyph
+        return hyph.main(argv[1:])
     ap = argparse.ArgumentParser(prog="xtconvert", description=__doc__)
     ap.add_argument("input", type=Path, nargs="+", help="PDF, CBZ, image, or folder of images")
     ap.add_argument("-o", "--output", type=Path, help="output file (single input) or folder")
