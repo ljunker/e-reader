@@ -70,6 +70,7 @@ private:
     void actSort();
     void actSleepScreen();
     void actHyphenation();
+    void actFont();
     void actRescan();
     void actWifi();
     void actWifiStop();

@@ -124,7 +124,8 @@ void test_xml_tokenizer_in_small_chunks() {
 }
 
 void test_folding_and_paths() {
-    TEST_ASSERT_EQUAL_STRING("\"Zitat\" - ... 'a' --", foldText("\xE2\x80\x9EZitat\xE2\x80\x9C \xE2\x80\x93 \xE2\x80\xA6 \xE2\x80\x98" "a\xE2\x80\x99 \xE2\x80\x94").c_str());
+    TEST_ASSERT_EQUAL_STRING("\xE2\x80\x9EZitat\xE2\x80\x9C \xE2\x80\x93 \xE2\x80\xA6 \xE2\x80\x98" "a\xE2\x80\x99 \xE2\x80\x94 \xE2\x80\x94 \xE2\x80\xA2 - \"",
+                             foldText("\xE2\x80\x9EZitat\xE2\x80\x9C \xE2\x80\x93 \xE2\x80\xA6 \xE2\x80\x98" "a\xE2\x80\x99 \xE2\x80\x94 \xE2\x80\x95 \xE2\x97\x8F \xE2\x80\x91 \xE2\x80\x9F").c_str());   // kept: dashes, quotes, ellipsis; folded: bar, black circle, nb-hyphen, reversed quote
     TEST_ASSERT_EQUAL_STRING("L\xC3\xB3" "dz OE fi ?", foldText("  \xC5\x81\xC3\xB3" "d\xC5\xBA\n \xC5\x92 \xEF\xAC\x81 \xCE\xB1 ").c_str());
     TEST_ASSERT_EQUAL_STRING("ab", foldText("a\xC2\xAD" "b").c_str());   // soft hyphen
     TEST_ASSERT_EQUAL_STRING("\xC3\xA4", foldText("\xE4").c_str());       // stray Latin-1 byte
@@ -187,7 +188,7 @@ void test_convert_epub3_text() {
     // cover first, on its own page
     TEST_ASSERT_EQUAL(0, t.find("<img 0><page>[h1|l|^]Kapitel 1"));
     // the gap between words comes before a style change
-    ASSERT_HAS(t, "Kapitel 1[p|^]Ein <i>kursives </>und <b>fettes </>Wort & \"Zitat\" -- 10\xC2\xA0km.");
+    ASSERT_HAS(t, "Kapitel 1[p|^]Ein <i>kursives </>und <b>fettes </>Wort & \xE2\x80\x9EZitat\xE2\x80\x9C \xE2\x80\x94 10\xC2\xA0km.");
     ASSERT_HAS(t, "[p|c|>]Mitte");
     TEST_ASSERT_TRUE(t.find("Unsichtbar") == std::string::npos);
     TEST_ASSERT_TRUE(t.find("not text") == std::string::npos);
@@ -195,7 +196,7 @@ void test_convert_epub3_text() {
     TEST_ASSERT_TRUE(t.find("Kapitel 1Kapitel") == std::string::npos);   // <title> is not text
     ASSERT_HAS(t, "<page>[h2|c|^]Abschnitt[p|^]Bild folgt:<img 1>");
     ASSERT_HAS(t, "[li|l]\xC2\xB7 Erstens[li|l]\xC2\xB7 Zweitens");
-    ASSERT_HAS(t, "[p|>]<i>schr\xC3\xA4g<b>dick</>, <b>inline </>L\xC3\xB3" "dz ...<page>");
+    ASSERT_HAS(t, "[p|>]<i>schr\xC3\xA4g<b>dick</>, <b>inline </>L\xC3\xB3" "dz \xE2\x80\xA6<page>");
     ASSERT_HAS(t, "<page>[h1|l|^]Kapitel 2[h3|l|^]Untertitel[p|^]Zeile eins<br>Zeile zwei[p|>]Absatz 0");
 }
 

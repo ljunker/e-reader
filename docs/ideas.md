@@ -34,7 +34,7 @@ Rule of thumb: **data goes on the microSD card, only code goes into flash.**
 
 | Feature | What it does | Flash | Notes |
 |---|---|---|---|
-| Fonts from SD + gray anti-aliasing | Fonts as files loaded into PSRAM, own TTFs via `xtconvert` | **saves ~118 KB** | 4-gray mode on the SSD1683 needs a full refresh per page |
+| Fonts from SD + gray anti-aliasing | Fonts as files loaded into PSRAM, own TTFs via `xtconvert` | **saved 84 KB** (measured: U8g2 out, 20 KB built-in Inter in) | fonts from SD **done** (`/fonts/*.xff`, 2-bit glyphs, shown black and white); 4-gray mode on the SSD1683 needs a full refresh per page |
 | OPDS / Calibre content server | Browse and download books on the device | ~15–25 KB (HTTP) | HTTPS pulls in mbedTLS: +100 KB or more |
 | KOReader progress sync | Share reading position with other devices | ~10 KB (HTTP) | same HTTPS caveat |
 
@@ -49,5 +49,4 @@ Rule of thumb: **data goes on the microSD card, only code goes into flash.**
 
 | Change | Saves |
 |---|---|
-| TXT books use Lucida like EPUB, drop the `ncen` fonts | ~14 KB |
 | `CORE_DEBUG_LEVEL=0` in release builds (less printf/log code) | some of ~30 KB |

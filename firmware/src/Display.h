@@ -1,20 +1,33 @@
 #pragma once
 #include <GxEPD2_BW.h>
-#include <U8g2_for_Adafruit_GFX.h>
+
+#include "FontFile.h"
 
 #include "pins.h"
 
 using Epd = GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT>;
 
-// U8g2_for_Adafruit_GFX switches back to solid mode on every font change,
-// which fills each glyph's box with the background colour (white text on a
-// black selection bar came out as white blocks). Keep text transparent.
-class TextRenderer : public U8G2_FOR_ADAFRUIT_GFX {
+// Draws text in the .xff fonts (see Fonts.h) into the display buffer. The
+// interface follows the U8g2 calls the reader used before. Anti-aliased
+// glyphs are thresholded: ink levels 2 and 3 become the foreground colour.
+class TextRenderer {
 public:
-    void setFont(const uint8_t* font) {
-        U8G2_FOR_ADAFRUIT_GFX::setFont(font);
-        setFontMode(1);
-    }
+    void begin(Adafruit_GFX& gfx) { gfx_ = &gfx; }
+    void setFont(const xff::Face* face) { face_ = face; }
+    const xff::Face* font() const { return face_; }
+    void setForegroundColor(uint16_t c) { fg_ = c; }
+
+    // Pen at (x, baseline y); returns the advance.
+    int16_t drawUTF8(int16_t x, int16_t y, const char* s);
+    int16_t getUTF8Width(const char* s) const { return face_ ? face_->width(s) : 0; }
+    int16_t getFontAscent() const { return face_ ? face_->ascent() : 0; }
+    int16_t getFontDescent() const { return face_ ? -face_->descent() : 0; }   // negative, as in U8g2
+
+private:
+    static void plot(void* ctx, int x, int y, uint8_t ink);
+    Adafruit_GFX* gfx_ = nullptr;
+    const xff::Face* face_ = nullptr;
+    uint16_t fg_ = GxEPD_BLACK;
 };
 
 // Wraps the Waveshare 4.2" V2 (SSD1683) panel: power pin, SPI pins, refresh policy.
@@ -24,7 +37,7 @@ public:
     void powerOff();             // hibernate the controller and cut module power
 
     Epd& gfx() { return epd_; }
-    TextRenderer& text() { return u8g2_; }
+    TextRenderer& text() { return text_; }
 
     void setPortrait(bool portrait);
     int width() { return epd_.width(); }
@@ -48,7 +61,7 @@ public:
 
 private:
     Epd epd_{GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)};
-    TextRenderer u8g2_;
+    TextRenderer text_;
     int sinceFull_ = 1000;
     bool initialised_ = false;
 };

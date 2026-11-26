@@ -20,11 +20,8 @@ void Display::begin(bool coldBoot) {
     epd_.init(0, true, 2, false);
     epd_.setRotation(DISPLAY_ROTATION_PORTRAIT);
     epd_.setTextColor(GxEPD_BLACK);
-    u8g2_.begin(epd_);
-    u8g2_.setFontMode(1);
-    u8g2_.setFontDirection(0);
-    u8g2_.setForegroundColor(GxEPD_BLACK);
-    u8g2_.setBackgroundColor(GxEPD_WHITE);
+    text_.begin(epd_);
+    text_.setForegroundColor(GxEPD_BLACK);
     sinceFull_ = 1000;
     initialised_ = true;
     (void)coldBoot;
@@ -49,4 +46,14 @@ void Display::show(bool forceFull) {
         epd_.display(true);
         sinceFull_++;
     }
+}
+
+void TextRenderer::plot(void* ctx, int x, int y, uint8_t ink) {
+    auto* t = static_cast<TextRenderer*>(ctx);
+    if (ink >= 2) t->gfx_->drawPixel(x, y, t->fg_);
+}
+
+int16_t TextRenderer::drawUTF8(int16_t x, int16_t y, const char* s) {
+    if (!face_ || !gfx_) return 0;
+    return face_->draw(x, y, s, strlen(s), plot, this);
 }

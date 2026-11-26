@@ -90,21 +90,21 @@ void appendFolded(uint32_t cp, std::string& out) {
     const char* s = nullptr;
     switch (cp) {
         case 0x2007: case 0x202F: s = "\xC2\xA0"; break;   // no-break spaces
-        case 0x2010: case 0x2011: case 0x2012: case 0x2013: case 0x2212: case 0x2043: s = "-"; break;
-        case 0x2014: case 0x2015: s = "--"; break;
-        case 0x2018: case 0x2019: case 0x201A: case 0x201B: case 0x2032: case 0x2039: case 0x203A: case 0x02BC:
-        case 0x02B9: s = "'"; break;
-        case 0x201C: case 0x201D: case 0x201E: case 0x201F: case 0x2033: case 0x02BA: s = "\""; break;
-        case 0x2026: s = "..."; break;
-        case 0x2022: case 0x2023: case 0x25CF: case 0x25AA: case 0x25E6: case 0x2219: s = "\xC2\xB7"; break;
-        case 0x20AC: s = "EUR"; break;
-        case 0x2122: s = "TM"; break;
+        case 0x2010: case 0x2011: case 0x2012: case 0x2212: case 0x2043: s = "-"; break;
+        // dashes, quotes, ellipsis, bullet, euro, trade mark, daggers: the
+        // .xff fonts have these (tools/converter/src/xtconvert/font.py, EXTRA)
+        case 0x2013: case 0x2014: case 0x2018: case 0x2019: case 0x201A: case 0x201C: case 0x201D: case 0x201E:
+        case 0x2026: case 0x2022: case 0x20AC: case 0x2122: case 0x2020: case 0x2021: case 0x2039: case 0x203A:
+            appendUtf8(cp, out);
+            return;
+        case 0x2015: appendUtf8(0x2014, out); return;
+        case 0x201B: case 0x2032: case 0x02BC: case 0x02B9: s = "'"; break;
+        case 0x201F: case 0x2033: case 0x02BA: s = "\""; break;
+        case 0x2023: case 0x25CF: case 0x25AA: case 0x25E6: case 0x2219: appendUtf8(0x2022, out); return;
         case 0x2116: s = "No"; break;
         case 0x2044: case 0x2215: s = "/"; break;
         case 0x2190: s = "<-"; break;
         case 0x2192: s = "->"; break;
-        case 0x2020: s = "+"; break;
-        case 0x2021: s = "++"; break;
         case 0x2030: s = "o/oo"; break;
         case 0x02C6: s = "^"; break;
         case 0x02DC: s = "~"; break;

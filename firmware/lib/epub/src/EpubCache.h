@@ -26,7 +26,7 @@
 
 namespace epub {
 
-constexpr uint32_t kCacheVersion = 2;   // 2: language in .etc
+constexpr uint32_t kCacheVersion = 3;   // 2: language in .etc, 3: typographic punctuation kept
 constexpr uint32_t kEtxHeaderSize = 16;
 
 struct TocItem {

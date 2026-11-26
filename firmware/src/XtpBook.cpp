@@ -49,8 +49,7 @@ void XtpBook::render() {
     const auto& h = reader_->header();
     display.setPortrait(!landscape());
     if (reader_->readPage(page_, pageBuf_, scratch_, scratchSize_) != xtp::Error::None) {
-        display.text().setCursor(10, 40);
-        display.text().print("Page could not be read");
+        display.text().drawUTF8(10, 40, "Page could not be read");
         return;
     }
     int ox = (display.width() - h.width) / 2;

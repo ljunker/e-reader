@@ -1,6 +1,7 @@
 #pragma once
 // The .etx rich-text stream: what the EPUB converter writes and RichLayout
-// reads. UTF-8 text (Latin-1 characters only, so the U8g2 fonts can show it)
+// reads. UTF-8 text (Latin-1 plus the dashes, quotes and other punctuation of
+// the .xff fonts; epub::appendFolded maps everything else)
 // with words separated by single spaces, plus control codes:
 //
 //   0x1E b      paragraph start; b = Block::encode()

@@ -82,11 +82,16 @@ languages and a card without `/hyph/` still break after hyphens already in a wor
 MENU → **Hyphenation** switches it off. Built with `xtconvert hyph` from the hyph-utf8 patterns in
 `tools/converter/patterns/`. Updating to this firmware converts each EPUB once more on first open.
 
+**Fonts:** copy the [`sdcard/fonts/`](sdcard/fonts) folder to the top of the card (`/fonts/literata.xff`).
+Books are then set in Literata (regular, bold, italic, bold italic) with true quotes and dashes; menus always use the
+built-in Inter, which also stands in for books when the card has no fonts. MENU → **Font** switches between the
+families in `/fonts/`. Your own TTF/OTF fonts: `xtconvert font` ([tools/converter](tools/converter#fonts)).
+
 Supported: EPUB 2 and 3, chapters in reading order, headings, bold and italic, alignment, blockquotes,
 lists, line breaks, page breaks from CSS, JPEG (baseline) and PNG pictures dithered to the panel,
 and the table of contents from the nav document or the NCX.
 Not supported: DRM-protected books (the reader says so), GIF/SVG and progressive JPEG pictures (left out),
-characters outside Latin-1 (shown as the nearest Latin letter or `?` until the TTF fonts arrive), footnote pop-ups.
+characters outside Latin-1 and the usual punctuation (shown as the nearest Latin letter or `?`), footnote pop-ups.
 
 ## Wi‑Fi upload & USB drive
 **Wi‑Fi:** put a `wifi.txt` in the top folder of the card, one network per line:
