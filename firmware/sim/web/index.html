@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E-Reader Simulator</title>
+<link rel="stylesheet" href="sim.css">
+</head>
+<body>
+<main class="layout">
+  <section class="stage" aria-label="Simulated e-reader">
+    <div class="device" id="device">
+      <button class="side-btn" data-btn="0" style="--y:88.26" aria-label="PREV (upper side button)"><span>PREV</span></button>
+      <button class="side-btn" data-btn="1" style="--y:63.54" aria-label="NEXT (lower side button)"><span>NEXT</span></button>
+      <div class="window">
+        <canvas id="panel" width="300" height="400" aria-label="E-paper display"></canvas>
+        <div class="overlay" id="overlay" hidden></div>
+      </div>
+      <div class="front-row">
+        <button class="front-btn" data-btn="2" style="--x:23.65" aria-label="MENU"><span>MENU</span></button>
+        <button class="front-btn" data-btn="3" style="--x:39.65" aria-label="OK"><span>OK</span></button>
+        <button class="front-btn" data-btn="4" style="--x:55.65" aria-label="BACK"><span>BACK</span></button>
+      </div>
+    </div>
+    <p class="status-line">
+      <span class="dot" id="stateDot"></span><span id="stateText">Loading firmware…</span>
+      <span class="sep">·</span><span class="led" id="led" title="Red LED on the Feather; on while the display is powered"></span><span>display power</span>
+    </p>
+    <p class="keys">Keys: <kbd>←</kbd> PREV · <kbd>→</kbd> NEXT · <kbd>M</kbd> MENU · <kbd>Enter</kbd> OK · <kbd>Esc</kbd> BACK · hold ≥ 0.7 s for a long press</p>
+  </section>
+
+  <aside class="panel">
+    <header class="panel-head">
+      <h1>E-Reader Simulator</h1>
+      <p>The firmware from <code>src/</code>, built with <code>pio run -e sim</code>, on simulated hardware.</p>
+    </header>
+
+    <section class="card">
+      <h2>Device</h2>
+      <div class="row">
+        <button id="resetBtn">Reset</button>
+        <button id="skipBtn" title="Moves the clock forward, so the idle timeout (3 min) runs out">Skip 3 min</button>
+        <label class="inline"><input type="checkbox" id="instant"> Instant refresh</label>
+      </div>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="gauge" checked> Battery monitor (MAX17048)</label>
+      </div>
+      <div class="row">
+        <label for="battery" class="grow">Battery <output id="batteryOut">80 %</output></label>
+        <input type="range" id="battery" min="0" max="100" value="80">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>USB‑C</h2>
+      <div class="seg" role="radiogroup" aria-label="USB cable">
+        <label><input type="radio" name="cable" value="0" checked> Unplugged</label>
+        <label><input type="radio" name="cable" value="1"> Computer</label>
+        <label><input type="radio" name="cable" value="2"> Charger</label>
+      </div>
+      <div class="drive" id="drive" hidden>
+        <p><strong>E-READER</strong> is mounted on the computer. The file list below is the computer's view of the card.</p>
+        <button id="ejectBtn">Eject</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Wi‑Fi</h2>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="wifiRange" checked> A network from <code>wifi.txt</code> is in range</label>
+      </div>
+      <p class="hint" id="webState">Upload page: off. Start it on the reader with MENU → Wi‑Fi upload.</p>
+      <div class="web" id="web" hidden>
+        <p><a href="device/" target="_blank" rel="noopener">Open the upload page in a new tab</a> (served by the firmware's web server)</p>
+        <iframe id="webFrame" title="Upload page of the reader"></iframe>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>microSD card</h2>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="card" checked> Inserted <span class="hint">(takes effect when the reader mounts it)</span></label>
+      </div>
+      <div class="drop" id="drop" tabindex="0">Drop <code>.epub</code>, <code>.txt</code>, <code>.xtp</code> here to copy them into <code>/books</code>, or click to choose</div>
+      <input type="file" id="pick" multiple hidden>
+      <ul class="files" id="files"></ul>
+      <div class="row">
+        <button id="refreshFiles">Refresh list</button>
+        <button id="editWifi">Edit wifi.txt</button>
+        <button id="wipeCard" class="danger">Reset card</button>
+      </div>
+      <div class="editor" id="wifiEditor" hidden>
+        <textarea id="wifiText" rows="5" spellcheck="false"></textarea>
+        <div class="row"><button id="saveWifi">Save</button><button id="cancelWifi">Cancel</button></div>
+      </div>
+      <p class="hint">Changes made here while the reader runs are like swapping the card: MENU → Rescan shows them.</p>
+    </section>
+
+    <section class="card">
+      <h2>Serial monitor <button id="clearLog" class="small">Clear</button></h2>
+      <pre class="log" id="log"></pre>
+    </section>
+  </aside>
+</main>
+<script src="firmware.js"></script>
+<script src="sim.js"></script>
+</body>
+</html>

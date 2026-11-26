@@ -6,6 +6,17 @@
 
 using Epd = GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT>;
 
+// U8g2_for_Adafruit_GFX switches back to solid mode on every font change,
+// which fills each glyph's box with the background colour (white text on a
+// black selection bar came out as white blocks). Keep text transparent.
+class TextRenderer : public U8G2_FOR_ADAFRUIT_GFX {
+public:
+    void setFont(const uint8_t* font) {
+        U8G2_FOR_ADAFRUIT_GFX::setFont(font);
+        setFontMode(1);
+    }
+};
+
 // Wraps the Waveshare 4.2" V2 (SSD1683) panel: power pin, SPI pins, refresh policy.
 class Display {
 public:
@@ -13,7 +24,7 @@ public:
     void powerOff();             // hibernate the controller and cut module power
 
     Epd& gfx() { return epd_; }
-    U8G2_FOR_ADAFRUIT_GFX& text() { return u8g2_; }
+    TextRenderer& text() { return u8g2_; }
 
     void setPortrait(bool portrait);
     int width() { return epd_.width(); }
@@ -37,7 +48,7 @@ public:
 
 private:
     Epd epd_{GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)};
-    U8G2_FOR_ADAFRUIT_GFX u8g2_;
+    TextRenderer u8g2_;
     int sinceFull_ = 1000;
     bool initialised_ = false;
 };

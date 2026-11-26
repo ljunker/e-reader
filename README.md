@@ -37,12 +37,37 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 
 ## Development
 ```bash
-cd firmware && pio test -e native          # layout, EPUB, zip, image and .xtp unit tests on your computer
+cd firmware && pio test -e native          # panel model, layout, EPUB, zip, image and .xtp unit tests on your computer
 cd tools/converter && uv run pytest        # converter tests
 make -C cad                                # STLs + collision check (needs OpenSCAD 2024+)
 make -C cad png                            # preview renders
 make -C cad steps                          # step-by-step pictures for docs/assembly.md
 ```
+
+## Simulator
+Try the firmware in the browser, without hardware:
+```bash
+brew install emscripten                 # once (or https://emscripten.org)
+cd firmware && pio run -e sim -t serve  # then open http://localhost:8000/
+```
+`env:sim` compiles everything in `src/` unchanged, with the real GxEPD2, Adafruit GFX and U8g2 libraries
+and String/FS from the arduino-esp32 core, to WebAssembly. Only the hardware underneath is simulated (`firmware/sim/`):
+- **Display:** an SSD1683 model (`lib/epdsim`) receives GxEPD2's SPI commands. It holds BUSY for the real refresh time
+  and shows full refreshes flashing, like the panel does. "Instant refresh" skips the wait.
+- **Buttons:** click the caps or use the keys ← PREV, → NEXT, M MENU, Enter OK, Esc BACK. Holding a button gives a
+  long press.
+- **microSD and NVS:** kept in the browser's IndexedDB. On first start the card gets the test EPUBs, a short TXT and a
+  `wifi.txt`. The side panel lists, adds, downloads and deletes files.
+- **Deep sleep:** "Skip 3 min" runs out the idle timer. The panel keeps its picture, and a button reboots the
+  firmware with its RTC memory, as on the chip. "Reset" is a cold start.
+- **USB-C:** set the cable to Unplugged, Computer or Charger. While the drive is on, the file panel is the computer's
+  view, and "Eject" ejects it.
+- **Wi‑Fi:** the firmware's own upload page appears in the side panel. A service worker passes its requests to the
+  firmware's web server.
+- **Battery:** a simulated MAX17048 on I2C, set with the slider.
+
+Not simulated: radio, real USB/sector access, RAM/PSRAM limits and the speed of the ESP32-S3 (EPUB conversion is
+much faster in the browser).
 
 ## EPUB on the device
 The first time a book is opened, the reader converts it once into cache files in `/.reader/` on the card
