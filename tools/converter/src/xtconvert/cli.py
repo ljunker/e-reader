@@ -1,6 +1,7 @@
 """Command line: xtconvert book.pdf [-o book.xtp] [--mode fit|width|landscape] ...
 
-xtconvert hyph patterns.tex -o de.hyp builds hyphenation patterns for the SD card (see hyph.py)."""
+xtconvert hyph patterns.tex -o de.hyp builds hyphenation patterns for the SD card (see hyph.py).
+xtconvert font Font.ttf -o font.xff builds a bitmap font for the SD card (see font.py)."""
 from __future__ import annotations
 
 import argparse
@@ -40,6 +41,9 @@ def main(argv: list[str] | None = None) -> int:
     if argv[:1] == ["hyph"]:
         from . import hyph
         return hyph.main(argv[1:])
+    if argv[:1] == ["font"]:
+        from . import font
+        return font.main(argv[1:])
     ap = argparse.ArgumentParser(prog="xtconvert", description=__doc__)
     ap.add_argument("input", type=Path, nargs="+", help="PDF, CBZ, image, or folder of images")
     ap.add_argument("-o", "--output", type=Path, help="output file (single input) or folder")
