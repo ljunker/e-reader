@@ -1,4 +1,4 @@
-// DIY e-reader — FeatherS3 + Waveshare 4.2" V2 e-paper.
+// DIY e-reader — Adafruit ESP32-S3 Feather + Waveshare 4.2" V2 e-paper.
 #include <Arduino.h>
 #include <esp_sleep.h>
 
