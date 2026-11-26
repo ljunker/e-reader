@@ -5,6 +5,7 @@
 
 #include "Book.h"
 #include "Buttons.h"
+#include "Covers.h"
 #include "Storage.h"
 
 // Screens: library list, reading view, menu overlay, message.
@@ -13,7 +14,10 @@ public:
     void begin(const String& storageError);
     void handle(const ButtonEvent& e);
     // Saves the reading position and leaves a sensible image on the panel.
-    void prepareSleep();
+    // Returns true when that image is a cover rather than the page.
+    bool prepareSleep();
+    // "Sleep now" was chosen in the menu.
+    bool takeSleepRequest();
     // After deep sleep: reopen the book that was being read.
     bool resume(const char* path, uint32_t position);
     void redraw();
@@ -42,11 +46,19 @@ private:
     // label, an optional left indent and an optional tag shown on the right.
     void drawList(int count, int sel, const std::function<void(int, String&, int&, const char*&)>& item);
     void drawStatus();
+    void drawBattery(int right, int baseline);
     void drawHeader(const char* title);
+    // One row of the library: cover, title, format and progress.
+    covers::State drawBookRow(int i, int y, bool selected);
 
     void openSelected();
     void closeBook();
     void turn(int delta);
+    void savePosition();
+    // Read the card again; keep `selectPath` selected if it is still there.
+    void reloadBooks(const String& selectPath);
+    // After opening or re-paginating: first page of every chapter.
+    void updateChapters();
 
     // menu actions
     void actFontSmaller();
@@ -55,6 +67,8 @@ private:
     void actToStart();
     void actLibrary();
     void actSleep();
+    void actSort();
+    void actSleepScreen();
     void actRescan();
     void actWifi();
     void actWifiStop();
@@ -70,6 +84,8 @@ private:
     int menuSel_ = 0;
     int tocSel_ = 0;
     uint32_t turnsSinceSave_ = 0;
+    std::vector<uint32_t> chapterPages_;   // parallel to book_->toc()
+    bool sleepRequested_ = false;
     String storageError_;
 };
 

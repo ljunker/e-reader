@@ -72,12 +72,21 @@ static void scan(const char* dir, std::vector<BookEntry>& out) {
     }
 }
 
-std::vector<BookEntry> listBooks() {
+static String key(char prefix, const String& path);
+static uint32_t loadMeta(const String& path);
+
+std::vector<BookEntry> listBooks(bool recentFirst) {
     std::vector<BookEntry> out;
     if (!mounted_) return out;
     scan(BOOKS_DIR, out);
     scan("/", out);
-    std::sort(out.begin(), out.end(), [](const BookEntry& a, const BookEntry& b) {
+    for (auto& b : out) {
+        uint32_t m = loadMeta(b.path);
+        b.lastRead = m >> 8;
+        b.percent = uint8_t(m);
+    }
+    std::sort(out.begin(), out.end(), [recentFirst](const BookEntry& a, const BookEntry& b) {
+        if (recentFirst && a.lastRead != b.lastRead) return a.lastRead > b.lastRead;
         return a.name.compareTo(b.name) < 0;
     });
     return out;
@@ -89,19 +98,40 @@ uint32_t hash(const String& s) {   // FNV-1a
     return h;
 }
 
-static String key(const String& path) {
+// NVS keys per book: "p<hash>" position, "m<hash>" (open order << 8 | percent).
+static String key(char prefix, const String& path) {
     char k[12];
-    snprintf(k, sizeof k, "p%08lx", (unsigned long)hash(path));
+    snprintf(k, sizeof k, "%c%08lx", prefix, (unsigned long)hash(path));
     return k;
 }
 
-uint32_t loadPosition(const String& path) { return prefs.getUInt(key(path).c_str(), 0); }
-void savePosition(const String& path, uint32_t pos) {
-    if (prefs.getUInt(key(path).c_str(), UINT32_MAX) != pos) prefs.putUInt(key(path).c_str(), pos);
+static uint32_t loadMeta(const String& path) { return prefs.getUInt(key('m', path).c_str(), 0); }
+
+static void saveMeta(const String& path, uint32_t m) {
+    if (loadMeta(path) != m) prefs.putUInt(key('m', path).c_str(), m);
+}
+
+uint32_t loadPosition(const String& path) { return prefs.getUInt(key('p', path).c_str(), 0); }
+void savePosition(const String& path, uint32_t pos, uint8_t percent) {
+    if (prefs.getUInt(key('p', path).c_str(), UINT32_MAX) != pos) prefs.putUInt(key('p', path).c_str(), pos);
+    saveMeta(path, (loadMeta(path) & ~0xFFu) | percent);
+}
+
+void markOpened(const String& path) {
+    uint32_t m = loadMeta(path);
+    uint32_t seq = prefs.getUInt("seq", 0);
+    if (seq != 0 && (m >> 8) == seq) return;   // already the latest
+    seq = (seq + 1) & 0xFFFFFF;
+    prefs.putUInt("seq", seq);
+    saveMeta(path, seq << 8 | (m & 0xFF));
 }
 
 uint8_t fontSize() { return prefs.getUChar("font", 1); }
 void setFontSize(uint8_t s) { prefs.putUChar("font", s); }
+bool sortRecent() { return prefs.getBool("sortrec", true); }
+void setSortRecent(bool v) { prefs.putBool("sortrec", v); }
+bool sleepCover() { return prefs.getBool("sleepcov", true); }
+void setSleepCover(bool v) { prefs.putBool("sleepcov", v); }
 
 String cacheFile(const String& bookPath, const char* suffix) {
     char name[24];
@@ -110,11 +140,12 @@ String cacheFile(const String& bookPath, const char* suffix) {
 }
 
 void forgetBook(const String& path) {
-    for (const char* suffix : {".tix", ".eix", ".etx", ".eim", ".etc"}) {
+    for (const char* suffix : {".tix", ".eix", ".etx", ".eim", ".etc", ".cov"}) {
         String f = cacheFile(path, suffix);
         if (SD_MMC.exists(f)) SD_MMC.remove(f);
     }
-    if (prefs.isKey(key(path).c_str())) prefs.remove(key(path).c_str());
+    for (char prefix : {'p', 'm'})
+        if (prefs.isKey(key(prefix, path).c_str())) prefs.remove(key(prefix, path).c_str());
 }
 
 }  // namespace storage
