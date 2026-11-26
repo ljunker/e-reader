@@ -165,6 +165,7 @@ void test_package_epub3() {
     std::string err;
     TEST_ASSERT_TRUE(loadPackage(a, pkg, err));
     TEST_ASSERT_EQUAL_STRING("Das Testbuch & mehr", pkg.title.c_str());
+    TEST_ASSERT_EQUAL_STRING("de", pkg.language.c_str());
     TEST_ASSERT_EQUAL(2, pkg.spine.size());
     TEST_ASSERT_EQUAL_STRING("OEBPS/text/ch1.xhtml", pkg.spine[0].c_str());
     TEST_ASSERT_EQUAL_STRING("OEBPS/images/cover.jpg", pkg.coverPath.c_str());
@@ -204,17 +205,18 @@ void test_convert_epub3_toc_and_images() {
     TEST_ASSERT_TRUE(b.ok);
     MemSource toc;
     toc.d = b.etc.d;
-    std::string title;
+    std::string title, lang;
     std::vector<TocItem> items;
-    TEST_ASSERT_TRUE(readToc(toc, toc.d.size(), uint32_t(b.src.d.size()), title, items));
+    TEST_ASSERT_TRUE(readToc(toc, toc.d.size(), uint32_t(b.src.d.size()), title, lang, items));
     TEST_ASSERT_EQUAL_STRING("Das Testbuch & mehr", title.c_str());
+    TEST_ASSERT_EQUAL_STRING("de", lang.c_str());
     TEST_ASSERT_EQUAL(3, items.size());
     TEST_ASSERT_EQUAL(etx::kPara, char(b.etx.d[items[0].pos]));
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[0].pos).find("[h1|l|^]Kapitel 1"));
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[1].pos).find("[h2|c|^]Abschnitt"));
     TEST_ASSERT_EQUAL(1, items[1].level);
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[2].pos).find("[h1|l|^]Kapitel 2[h3"));
-    TEST_ASSERT_FALSE(readToc(toc, toc.d.size(), 12345, title, items));   // other EPUB size
+    TEST_ASSERT_FALSE(readToc(toc, toc.d.size(), 12345, title, lang, items));   // other EPUB size
 
     MemSource eim;
     eim.d = b.eim.d;
@@ -238,10 +240,11 @@ void test_convert_epub2_with_ncx() {
     TEST_ASSERT_EQUAL_STRING("[p]Erster Text.<page>[p]Vorher.[p|>]Ziel.", t.c_str());
     MemSource toc;
     toc.d = b.etc.d;
-    std::string title;
+    std::string title, lang;
     std::vector<TocItem> items;
-    TEST_ASSERT_TRUE(readToc(toc, toc.d.size(), uint32_t(b.src.d.size()), title, items));
+    TEST_ASSERT_TRUE(readToc(toc, toc.d.size(), uint32_t(b.src.d.size()), title, lang, items));
     TEST_ASSERT_EQUAL(2, items.size());
+    TEST_ASSERT_TRUE(lang.empty());
     TEST_ASSERT_EQUAL_STRING("Unterpunkt", items[1].title.c_str());
     TEST_ASSERT_EQUAL(1, items[1].level);
     TEST_ASSERT_EQUAL(0, dump(b.etx.d, items[1].pos).find("[p|>]Ziel."));

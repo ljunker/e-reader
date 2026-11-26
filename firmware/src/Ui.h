@@ -69,6 +69,7 @@ private:
     void actSleep();
     void actSort();
     void actSleepScreen();
+    void actHyphenation();
     void actRescan();
     void actWifi();
     void actWifiStop();

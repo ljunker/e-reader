@@ -42,6 +42,8 @@ bool sortRecent();              // library order: recently read first
 void setSortRecent(bool);
 bool sleepCover();              // sleep screen: the book's cover instead of the page
 void setSleepCover(bool);
+bool hyphenate();               // break long words at line ends
+void setHyphenate(bool);
 
 // "/.reader/<hash><suffix>" for cached data belonging to a book.
 String cacheFile(const String& bookPath, const char* suffix);

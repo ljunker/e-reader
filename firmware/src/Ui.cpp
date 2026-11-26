@@ -333,6 +333,8 @@ void Ui::showMenu() {
         menu_.push_back({storage::sortRecent() ? "Sort: recently read" : "Sort: by title", &Ui::actSort});
         menu_.push_back({"Rescan card", &Ui::actRescan});
     }
+    if (beforeMenu_ != Screen::Reader || !book_->fullScreen())
+        menu_.push_back({storage::hyphenate() ? "Hyphenation: on" : "Hyphenation: off", &Ui::actHyphenation});
     menu_.push_back({storage::sleepCover() ? "Sleep screen: cover" : "Sleep screen: page", &Ui::actSleepScreen});
     if (storageError_.isEmpty()) menu_.push_back({"Wi-Fi upload", &Ui::actWifi});
     if (usbdrive::available() && usbdrive::hostConnected()) menu_.push_back({"USB drive", &Ui::actUsb});
@@ -445,6 +447,17 @@ void Ui::actSort() {
 void Ui::actSleepScreen() {
     storage::setSleepCover(!storage::sleepCover());
     showMenu();
+}
+
+void Ui::actHyphenation() {
+    storage::setHyphenate(!storage::hyphenate());
+    if (beforeMenu_ != Screen::Reader) {
+        showMenu();
+        return;
+    }
+    book_->relayout();
+    updateChapters();
+    showReader(true);
 }
 
 void Ui::back() {

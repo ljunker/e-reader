@@ -49,12 +49,14 @@ struct OpfHandler : XmlHandler {
     std::string dir;
     std::vector<std::string> spineIds;
     std::string tocId, coverId, title;
-    bool inTitle = false, haveTitle = false;
+    bool inTitle = false, haveTitle = false, inLang = false, haveLang = false;
     explicit OpfHandler(Package& p, std::string d) : pkg(p), dir(std::move(d)) {}
 
     void startTag(const std::string& name, const Attrs& a, bool selfClosing) override {
         if (name == "title" && !haveTitle) {
             inTitle = !selfClosing;
+        } else if (name == "language" && !haveLang) {
+            inLang = !selfClosing;
         } else if (name == "item") {
             ManifestItem it;
             if (const std::string* v = findAttr(a, "id")) it.id = *v;
@@ -78,10 +80,14 @@ struct OpfHandler : XmlHandler {
         if (name == "title" && inTitle) {
             inTitle = false;
             haveTitle = true;
+        } else if (name == "language" && inLang) {
+            inLang = false;
+            haveLang = true;
         }
     }
     void text(const std::string& s) override {
         if (inTitle) title += s;
+        if (inLang) pkg.language += s;
     }
 };
 
@@ -222,6 +228,7 @@ bool loadPackage(zip::Archive& zip, Package& pkg, std::string& error) {
         return false;
     }
     pkg.title = foldText(oh.title);
+    pkg.language = foldText(pkg.language);
     for (const auto& id : oh.spineIds)
         if (const ManifestItem* m = byId(pkg, id))
             if (!m->path.empty() && zip.find(m->path)) pkg.spine.push_back(m->path);

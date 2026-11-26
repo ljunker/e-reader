@@ -5,6 +5,7 @@
 
 #include "Display.h"
 #include "Fonts.h"
+#include "Hyphenation.h"
 #include "Package.h"
 #include "Xtp.h"
 #include "Zip.h"
@@ -87,6 +88,9 @@ rich::Layout EpubBook::makeLayout() {
     e.blockIndent = PARA_INDENT;
     e.leading = fonts::leading(font_);
     e.paraGap = 8;
+    if (hyphId_) e.hyphenate = [this](const char* s, size_t n, uint16_t* out, int max) {
+            return hyph_.breaks(s, n, out, max);
+        };
     return rich::Layout(e);
 }
 
@@ -100,9 +104,9 @@ bool EpubBook::loadCache(uint32_t epubSize) {
 
     FileSource toc;
     toc.f = storage::fs().open(etcPath_, FILE_READ);
-    std::string title;
+    std::string title, lang;
     std::vector<epub::TocItem> items;
-    if (!toc.f || !epub::readToc(toc, toc.f.size(), epubSize, title, items)) return false;
+    if (!toc.f || !epub::readToc(toc, toc.f.size(), epubSize, title, lang, items)) return false;
     toc.f.close();
 
     FileSource img;
@@ -111,6 +115,7 @@ bool EpubBook::loadCache(uint32_t epubSize) {
     img.f.close();
 
     if (!title.empty()) title_ = title.c_str();
+    lang_ = hyph::normalizeLanguage(lang.c_str());
     toc_.clear();
     for (const auto& t : items) toc_.push_back({t.pos, t.level, String(t.title.c_str())});
     return true;
@@ -185,6 +190,7 @@ bool EpubBook::open(const BookEntry& entry, String& error) {
         }
     }
     font_ = storage::fontSize();
+    loadHyphenation();
     if (!loadIndex()) {
         if (!paginate()) {
             error = "Could not lay out the book";
@@ -239,24 +245,32 @@ bool EpubBook::paginate() {
     return true;
 }
 
-// Index cache layout: "EIX1", etx size, font, width, height, count, starts[count]
+void EpubBook::loadHyphenation() {
+    if (lang_.isEmpty()) {   // no dc:language: guess from a stretch of text a third into the book
+        uint32_t n = readWindow(std::max<uint32_t>(epub::kEtxHeaderSize, etxSize_ / 3));
+        lang_ = hyph::guessLanguage(window, n);
+    }
+    hyphId_ = hyphenation::load(lang_.c_str(), hyph_);
+}
+
+// Index cache layout: "EIX2", etx size, font, width, height, hyphenation id, count, starts[count]
 bool EpubBook::loadIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".eix"), FILE_READ);
     if (!f) return false;
-    uint32_t hdr[6];
+    uint32_t hdr[7];
     if (f.read((uint8_t*)hdr, sizeof hdr) != sizeof hdr) return false;
-    if (hdr[0] != 0x31584945 || hdr[1] != etxSize_ || hdr[2] != font_ || hdr[3] != uint32_t(textWidth()) ||
-        hdr[4] != uint32_t(textHeight()) || hdr[5] == 0 || hdr[5] > etxSize_)
+    if (hdr[0] != 0x32584945 || hdr[1] != etxSize_ || hdr[2] != font_ || hdr[3] != uint32_t(textWidth()) ||
+        hdr[4] != uint32_t(textHeight()) || hdr[5] != hyphId_ || hdr[6] == 0 || hdr[6] > etxSize_)
         return false;
-    starts_.resize(hdr[5]);
-    size_t bytes = hdr[5] * sizeof(Start);
+    starts_.resize(hdr[6]);
+    size_t bytes = hdr[6] * sizeof(Start);
     return f.read((uint8_t*)starts_.data(), bytes) == bytes;
 }
 
 void EpubBook::saveIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".eix"), FILE_WRITE);
     if (!f) return;
-    uint32_t hdr[6] = {0x31584945, etxSize_, font_, uint32_t(textWidth()), uint32_t(textHeight()),
+    uint32_t hdr[7] = {0x32584945, etxSize_, font_, uint32_t(textWidth()), uint32_t(textHeight()), hyphId_,
                        uint32_t(starts_.size())};
     f.write((uint8_t*)hdr, sizeof hdr);
     f.write((uint8_t*)starts_.data(), starts_.size() * sizeof(Start));
@@ -272,6 +286,7 @@ uint32_t EpubBook::pageOf(uint32_t pos) const {
 void EpubBook::relayout() {
     uint32_t pos = position();
     font_ = storage::fontSize();
+    if (storage::hyphenate() != (hyphId_ != 0)) loadHyphenation();
     if (!loadIndex()) {
         paginate();
         saveIndex();
@@ -322,7 +337,7 @@ void EpubBook::render() {
             memcpy(word, window + r.start, len);
             word[len] = 0;
             display.text().setFont(fonts::rich(font_, r.font));
-            display.text().drawUTF8(MARGIN_X + r.x, y, word);
+            display.text().drawUTF8(MARGIN_X + r.x, y, r.hyphen ? "-" : word);
         }
     }
 }

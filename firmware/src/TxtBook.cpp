@@ -4,6 +4,7 @@
 
 #include "Display.h"
 #include "Fonts.h"
+#include "Hyphenation.h"
 #include "config.h"
 
 static constexpr uint32_t WINDOW = 8192;   // bytes read per page (a page is < 3 KB)
@@ -39,7 +40,17 @@ layout::Layout TxtBook::makeLayout() {
     p.width = textWidth();
     p.indent = PARA_INDENT;
     p.maxLines = std::max(1, textHeight() / lineH_);
+    if (hyphId_) p.hyphenate = [this](const char* s, size_t n, uint16_t* out, int max) {
+            return hyph_.breaks(s, n, out, max);
+        };
     return layout::Layout(measure, p);
+}
+
+// Plain text has no language tag: guess it from a stretch a third into the file.
+void TxtBook::loadHyphenation() {
+    uint32_t winStart;
+    uint32_t n = readWindow(std::max(textStart_, size_ / 3), winStart);
+    hyphId_ = hyphenation::load(hyph::guessLanguage(window, n), hyph_);
 }
 
 bool TxtBook::open(const BookEntry& entry, String& error) {
@@ -57,6 +68,7 @@ bool TxtBook::open(const BookEntry& entry, String& error) {
     textStart_ = (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) ? 3 : 0;
     font_ = storage::fontSize();
     applyFont();
+    loadHyphenation();
     if (!loadIndex()) {
         if (!paginate()) {
             error = "Could not lay out the text";
@@ -110,18 +122,18 @@ bool TxtBook::paginate() {
     return true;
 }
 
-// Index cache layout: "TIX1", size, font, width, lines, count, starts[count]
+// Index cache layout: "TIX2", size, font, width, lines, hyphenation id, count, starts[count]
 bool TxtBook::loadIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".tix"), FILE_READ);
     if (!f) return false;
-    uint32_t hdr[6];
+    uint32_t hdr[7];
     if (f.read((uint8_t*)hdr, sizeof hdr) != sizeof hdr) return false;
     layout::Layout lay = makeLayout();
-    if (hdr[0] != 0x31584954 || hdr[1] != size_ || hdr[2] != font_ || hdr[3] != uint32_t(lay.params().width) ||
-        hdr[4] != uint32_t(lay.params().maxLines) || hdr[5] == 0 || hdr[5] > size_)
+    if (hdr[0] != 0x32584954 || hdr[1] != size_ || hdr[2] != font_ || hdr[3] != uint32_t(lay.params().width) ||
+        hdr[4] != uint32_t(lay.params().maxLines) || hdr[5] != hyphId_ || hdr[6] == 0 || hdr[6] > size_)
         return false;
-    starts_.resize(hdr[5]);
-    size_t bytes = hdr[5] * sizeof(uint32_t);
+    starts_.resize(hdr[6]);
+    size_t bytes = hdr[6] * sizeof(uint32_t);
     return f.read((uint8_t*)starts_.data(), bytes) == bytes;
 }
 
@@ -129,8 +141,8 @@ void TxtBook::saveIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".tix"), FILE_WRITE);
     if (!f) return;
     layout::Layout lay = makeLayout();
-    uint32_t hdr[6] = {0x31584954, size_, font_, uint32_t(lay.params().width), uint32_t(lay.params().maxLines),
-                       uint32_t(starts_.size())};
+    uint32_t hdr[7] = {0x32584954, size_, font_, uint32_t(lay.params().width), uint32_t(lay.params().maxLines),
+                       hyphId_, uint32_t(starts_.size())};
     f.write((uint8_t*)hdr, sizeof hdr);
     f.write((uint8_t*)starts_.data(), starts_.size() * sizeof(uint32_t));
     f.close();
@@ -145,6 +157,7 @@ void TxtBook::relayout() {
     uint32_t pos = position();
     font_ = storage::fontSize();
     applyFont();
+    if (storage::hyphenate() != (hyphId_ != 0)) loadHyphenation();
     if (!loadIndex()) {
         paginate();
         saveIndex();
@@ -171,7 +184,8 @@ void TxtBook::render() {
             size_t len = std::min<size_t>(w.end - w.start, sizeof word - 1);
             memcpy(word, window + w.start, len);
             word[len] = 0;
-            display.text().drawUTF8(MARGIN_X + w.x, y, word);
+            int16_t advance = display.text().drawUTF8(MARGIN_X + w.x, y, word);
+            if (w.hyphen) display.text().drawUTF8(MARGIN_X + w.x + advance, y, "-");
         }
         y += lineH_;
     }

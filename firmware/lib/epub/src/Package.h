@@ -22,6 +22,7 @@ struct TocTarget {
 
 struct Package {
     std::string title;
+    std::string language;             // dc:language as written, e.g. "de-DE"
     std::string opfPath;
     std::vector<ManifestItem> manifest;
     std::vector<std::string> spine;   // archive paths in reading order (linear items)

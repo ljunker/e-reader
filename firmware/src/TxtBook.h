@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "Book.h"
+#include "Hyphen.h"
 #include "TextLayout.h"
 
 // Plain-text books (UTF-8). Paginates the whole file once per font size and
@@ -22,10 +23,13 @@ private:
     uint32_t readWindow(uint32_t pos, uint32_t& winStart);   // returns bytes read
     layout::Layout makeLayout();
     void applyFont();
+    void loadHyphenation();
 
     uint32_t size_ = 0;
     uint32_t textStart_ = 0;   // after a UTF-8 BOM
     uint8_t font_ = 1;
     int lineH_ = 20, ascent_ = 15;
     std::vector<uint32_t> starts_;
+    hyph::Hyphenator hyph_;
+    uint32_t hyphId_ = 0;   // hyphenation::load(); part of the index cache key
 };

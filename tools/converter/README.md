@@ -19,4 +19,18 @@ without the device.
 Copy the `.xtp` file to the SD card (or upload it over Wi‑Fi / USB).
 The format is documented in [`src/xtconvert/xtp.py`](src/xtconvert/xtp.py).
 
+## Hyphenation patterns
+
+`xtconvert hyph` turns TeX hyphenation patterns (hyph-utf8 `.tex` files, kept in
+`patterns/`) into the `.hyp` files the reader loads from `/hyph/` on the card:
+
+```bash
+uv run xtconvert hyph patterns/hyph-de-1996.tex -o ../../sdcard/hyph/de.hyp
+uv run xtconvert hyph patterns/hyph-en-us.tex -o ../../sdcard/hyph/en.hyp
+```
+
+Another language: add its `.tex` file and name the output after its two-letter code;
+the firmware maps `dc:language` to `de` and `en` today. The format is documented in
+[`src/xtconvert/hyph.py`](src/xtconvert/hyph.py).
+
 Tests: `uv run pytest`

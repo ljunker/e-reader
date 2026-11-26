@@ -132,6 +132,8 @@ bool sortRecent() { return prefs.getBool("sortrec", true); }
 void setSortRecent(bool v) { prefs.putBool("sortrec", v); }
 bool sleepCover() { return prefs.getBool("sleepcov", true); }
 void setSleepCover(bool v) { prefs.putBool("sleepcov", v); }
+bool hyphenate() { return prefs.getBool("hyph", true); }
+void setHyphenate(bool v) { prefs.putBool("hyph", v); }
 
 String cacheFile(const String& bookPath, const char* suffix) {
     char name[24];
