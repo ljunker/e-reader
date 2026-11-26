@@ -17,11 +17,15 @@ public:
     // After deep sleep: reopen the book that was being read.
     bool resume(const char* path, uint32_t position);
     void redraw();
+    // Background work: Wi-Fi requests, computer plugged in or ejected.
+    void poll();
+    // Wi-Fi or USB drive on: don't go to sleep.
+    bool busy() const;
     const char* openPath() const;
     uint32_t openPosition() const;
 
 private:
-    enum class Screen { Library, Reader, Menu, Toc, Message };
+    enum class Screen { Library, Reader, Menu, Toc, Message, Wifi, UsbAsk, Usb };
     struct MenuItem { String label; void (Ui::*action)(); };
 
     void showLibrary(bool full = false);
@@ -29,6 +33,11 @@ private:
     void showMenu();
     void showMessage(const String& title, const String& text);
     void showToc();
+    void showWifi();
+    void showUsbAsk();
+    void showUsb();
+    void showText(const char* title, const char* const* lines, int n, const char* hint);
+    void back();   // to the open book, else the library
     // One page of a selectable list below the header; `item` fills in the
     // label, an optional left indent and an optional tag shown on the right.
     void drawList(int count, int sel, const std::function<void(int, String&, int&, const char*&)>& item);
@@ -47,6 +56,10 @@ private:
     void actLibrary();
     void actSleep();
     void actRescan();
+    void actWifi();
+    void actWifiStop();
+    void actUsb();
+    void actUsbStop();
 
     Screen screen_ = Screen::Library;
     Screen beforeMenu_ = Screen::Library;

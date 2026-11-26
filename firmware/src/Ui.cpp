@@ -5,6 +5,8 @@
 #include "Display.h"
 #include "Fonts.h"
 #include "Power.h"
+#include "UsbDrive.h"
+#include "WifiShare.h"
 #include "config.h"
 
 Ui ui;
@@ -203,6 +205,8 @@ void Ui::showMenu() {
     } else {
         menu_.push_back({"Rescan card", &Ui::actRescan});
     }
+    if (storageError_.isEmpty()) menu_.push_back({"Wi-Fi upload", &Ui::actWifi});
+    if (usbdrive::available() && usbdrive::hostConnected()) menu_.push_back({"USB drive", &Ui::actUsb});
     menu_.push_back({"Sleep now", &Ui::actSleep});
 
     display.setPortrait(true);
@@ -290,6 +294,112 @@ void Ui::actSleep() {
     power::deepSleep();
 }
 
+void Ui::back() {
+    if (book_) showReader(true);
+    else showLibrary(true);
+}
+
+void Ui::showText(const char* title, const char* const* lines, int n, const char* hint) {
+    display.setPortrait(true);
+    display.clear();
+    drawHeader(title);
+    auto& t = display.text();
+    t.setFont(fonts::ui());
+    int y = LIST_TOP + 24;
+    for (int i = 0; i < n; i++) {
+        if (!lines[i]) { y += 10; continue; }   // nullptr = gap
+        String l = lines[i];
+        fitText(l, display.width() - 2 * MARGIN_X);
+        t.drawUTF8(MARGIN_X, y, l.c_str());
+        y += 22;
+    }
+    t.setFont(fonts::small());
+    t.drawUTF8(MARGIN_X, display.height() - 6, hint);
+}
+
+// ---------- Wi-Fi upload ----------
+
+void Ui::actWifi() {
+    closeBook();
+    screen_ = Screen::Wifi;
+    const char* lines[] = {"Connecting to Wi-Fi ...", nullptr, "Networks come from", WIFI_FILE " on the card."};
+    showText("Wi-Fi upload", lines, 4, "");
+    display.show(true);
+    String err;
+    if (!wifishare::start(err)) {
+        screen_ = Screen::Library;
+        showMessage("Wi-Fi", err);
+        return;
+    }
+    showWifi();
+}
+
+void Ui::showWifi() {
+    screen_ = Screen::Wifi;
+    String net = "Network: " + wifishare::network();
+    String addr = wifishare::address();
+    String count = String("Received: ") + wifishare::filesReceived() + " file" + (wifishare::filesReceived() == 1 ? "" : "s");
+    String last = wifishare::lastFile();
+    const char* lines[] = {net.c_str(), nullptr, "Open in a browser:", addr.c_str(), "http://ereader.local/",
+                           nullptr, count.c_str(), last.c_str()};
+    showText("Wi-Fi upload", lines, last.length() ? 8 : 7, "BACK stops Wi-Fi");
+    display.show();
+}
+
+void Ui::actWifiStop() {
+    wifishare::stop();
+    actRescan();
+}
+
+// ---------- USB drive ----------
+
+void Ui::showUsbAsk() {
+    screen_ = Screen::UsbAsk;
+    const char* lines[] = {"Connected to a computer.", nullptr, "Show the card as a", "USB drive?"};
+    showText("USB", lines, 4, "OK: USB drive   BACK: keep reading");
+    display.show(true);
+}
+
+void Ui::actUsb() {
+    closeBook();
+    usbdrive::enable();
+    showUsb();
+}
+
+void Ui::showUsb() {
+    screen_ = Screen::Usb;
+    const char* lines[] = {"The card is a USB drive now.", nullptr, "Copy books into /books,", "then eject the drive.",
+                           nullptr, "The reader is paused", "until then."};
+    showText("USB drive", lines, 7, "BACK: stop (eject first!)");
+    display.show(true);
+}
+
+void Ui::actUsbStop() {
+    String err;
+    if (!usbdrive::disable(err)) {
+        storageError_ = err;
+        showMessage("Storage", err + "\n\nRestart the reader.");
+        return;
+    }
+    actRescan();
+}
+
+void Ui::poll() {
+    if (wifishare::active()) {
+        wifishare::loop();
+        if (screen_ == Screen::Wifi && wifishare::takeChanged()) showWifi();
+        if (millis() - wifishare::lastRequestMs() > WIFI_IDLE_MS) actWifiStop();
+        return;
+    }
+    if (usbdrive::active()) {
+        if (usbdrive::ejected() || !usbdrive::hostConnected()) actUsbStop();
+        return;
+    }
+    if (screen_ != Screen::UsbAsk && storageError_.isEmpty() && usbdrive::takeHostArrived()) showUsbAsk();
+}
+
+bool Ui::busy() const { return wifishare::active() || usbdrive::active() || screen_ == Screen::UsbAsk; }
+
 // ---------- input ----------
 
 void Ui::handle(const ButtonEvent& e) {
@@ -343,7 +453,21 @@ void Ui::handle(const ButtonEvent& e) {
         }
         case Screen::Message:
             if (storageError_.length()) return;   // nothing to go back to
-            if (book_) showReader(true); else showLibrary(true);
+            back();
+            break;
+        case Screen::Wifi:
+            if (e.button == Btn::Back) actWifiStop();
+            break;
+        case Screen::UsbAsk:
+            if (e.button == Btn::Ok) {
+                actUsb();
+            } else if (e.button == Btn::Back) {
+                usbdrive::decline();
+                back();
+            }
+            break;
+        case Screen::Usb:
+            if (e.button == Btn::Back) actUsbStop();
             break;
     }
 }
