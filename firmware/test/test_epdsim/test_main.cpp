@@ -148,6 +148,50 @@ void test_y_decrement_mode() {
     TEST_ASSERT_TRUE(p.white(0, 7));
 }
 
+// The reader's 4-gray refresh (src/Panel.cpp): waveform via 0x32, both RAMs
+// as the two bits of the level, sequence 0xCF.
+void test_gray_refresh() {
+    static Ssd1683 p;   // large: keep it off the stack
+    std::vector<Refresh> seen;
+    std::vector<uint32_t> times;
+    std::vector<uint8_t> frame;
+    p.onRefresh = [&](const uint8_t* f, Refresh k, uint32_t ms) {
+        seen.push_back(k);
+        times.push_back(ms);
+        if (k == Refresh::Gray) frame.assign(f, f + Ssd1683::kWidth * Ssd1683::kHeight);
+    };
+    cmd(p, 0x12);
+    window(p, 0, 0, Ssd1683::kWidth, Ssd1683::kHeight);
+    fill(p, 0x26, Ssd1683::kStride * Ssd1683::kHeight, 0x00);
+    window(p, 0, 0, Ssd1683::kWidth, Ssd1683::kHeight);
+    fill(p, 0x24, Ssd1683::kStride * Ssd1683::kHeight, 0x00);
+    window(p, 0, 0, 8, 1);
+    cmd(p, 0x26, {0xC0});   // pixels 0, 1: black or dark gray
+    window(p, 0, 0, 8, 1);
+    cmd(p, 0x24, {0xA0});   // pixels 0, 2: black or light gray
+    TEST_ASSERT_FALSE(p.waveformLoaded());
+    cmd(p, 0x32, {0x01, 0x0A, 0x1B});
+    cmd(p, 0x3F, {0x02});
+    TEST_ASSERT_TRUE(p.waveformLoaded());
+    cmd(p, 0x22, {0xCF});
+    cmd(p, 0x20);
+    TEST_ASSERT_EQUAL(1, (int)seen.size());
+    TEST_ASSERT_TRUE(seen[0] == Refresh::Gray);
+    TEST_ASSERT_EQUAL(Ssd1683::kGrayMs, times[0]);
+    TEST_ASSERT_EQUAL(0, frame[0]);
+    TEST_ASSERT_EQUAL(1, frame[1]);
+    TEST_ASSERT_EQUAL(2, frame[2]);
+    TEST_ASSERT_EQUAL(3, frame[3]);
+    TEST_ASSERT_EQUAL(3, frame[Ssd1683::kWidth * Ssd1683::kHeight - 1]);
+    TEST_ASSERT_EQUAL(0, (int)p.unknownCommands());
+    // a software reset drops the waveform: GxEPD2's next update is black and white
+    cmd(p, 0x12);
+    TEST_ASSERT_FALSE(p.waveformLoaded());
+    cmd(p, 0x22, {0xF7});
+    cmd(p, 0x20, {}, 100000);
+    TEST_ASSERT_TRUE(seen.back() == Refresh::Full);
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_full_screen_write);
@@ -157,5 +201,6 @@ int main() {
     RUN_TEST(test_time_scale_zero_is_instant);
     RUN_TEST(test_deep_sleep_until_reset);
     RUN_TEST(test_y_decrement_mode);
+    RUN_TEST(test_gray_refresh);
     return UNITY_END();
 }

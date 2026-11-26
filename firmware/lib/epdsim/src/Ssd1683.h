@@ -1,7 +1,8 @@
 #pragma once
 // Model of the SSD1683 controller on the Waveshare 4.2" V2 panel, as far as
-// GxEPD2 drives it: two 400 × 300 1-bit RAMs, the RAM window and address
-// counters, the update sequence (0x22/0x20) and deep sleep. Used by the
+// GxEPD2 and the reader's 4-gray refresh (src/Panel.cpp) drive it: two
+// 400 × 300 1-bit RAMs, the RAM window and address counters, the update
+// sequence (0x22/0x20), a waveform loaded with 0x32 (4 grays) and deep sleep. Used by the
 // browser simulator; no Arduino or Emscripten code, so the host tests check it.
 #include <stdint.h>
 
@@ -9,7 +10,7 @@
 
 namespace epdsim {
 
-enum class Refresh : uint8_t { Full, Partial };
+enum class Refresh : uint8_t { Full, Partial, Gray };
 
 class Ssd1683 {
 public:
@@ -23,13 +24,15 @@ public:
     static constexpr uint32_t kPowerOffMs = 300;
     static constexpr uint32_t kFullMs = 1200;
     static constexpr uint32_t kPartialMs = 400;
+    static constexpr uint32_t kGrayMs = 5500;
     static constexpr uint32_t kResetMs = 10;
 
     Ssd1683() { powerLoss(); }
 
-    // Called when the panel shows a new picture: the black/white RAM
-    // (1 = white, row-major, kStride bytes per row) and the kind of refresh.
-    std::function<void(const uint8_t* ram, Refresh kind, uint32_t durationMs)> onRefresh;
+    // Called when the panel shows a new picture. Full and Partial: the
+    // black/white RAM (1 = white, row-major, kStride bytes per row). Gray:
+    // kWidth × kHeight bytes, one level per pixel, 0 = black .. 3 = white.
+    std::function<void(const uint8_t* frame, Refresh kind, uint32_t durationMs)> onRefresh;
 
     // 1.0 = real panel timing, 0 = instant.
     float timeScale = 1.0f;
@@ -51,6 +54,15 @@ public:
     const uint8_t* redRam() const { return red_; }
     // Pixel of the black/white RAM in panel coordinates; true = white.
     bool white(int x, int y) const { return bw_[y * kStride + x / 8] & (0x80 >> (x & 7)); }
+    // Gray level a 4-gray refresh shows for a pixel: RAM 0x26 holds the high
+    // bit (set = black or dark gray), RAM 0x24 the low bit (set = black or
+    // light gray), as the waveform from Waveshare's demo reads them.
+    uint8_t level(int x, int y) const {
+        uint8_t m = 0x80 >> (x & 7);
+        int i = y * kStride + x / 8;
+        return uint8_t(((red_[i] & m) ? 0 : 2) + ((bw_[i] & m) ? 0 : 1));
+    }
+    bool waveformLoaded() const { return lutLoaded_; }
 
     // Diagnostics for the tests.
     uint32_t refreshCount() const { return refreshes_; }
@@ -66,6 +78,7 @@ private:
     void holdBusy(uint32_t ms, uint32_t nowMs);
 
     uint8_t bw_[kStride * kHeight];
+    uint8_t levels_[kWidth * kHeight];
     uint8_t red_[kStride * kHeight];
 
     uint8_t cmd_ = 0;
@@ -79,6 +92,7 @@ private:
     uint8_t updateSeq_ = 0xff;
     uint8_t updateCtrl_ = 0;
     bool analogOn_ = false;
+    bool lutLoaded_ = false;   // 0x32 since the last reset: refreshes use it
     bool sleeping_ = false;
     uint32_t busyUntil_ = 0;
     uint32_t refreshes_ = 0;

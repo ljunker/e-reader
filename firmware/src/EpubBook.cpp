@@ -29,23 +29,13 @@ struct FileWriter : io::Writer {
 uint8_t fontSize = 1;   // reading size the measure callbacks use
 
 int measure(int slot, const char* s, size_t n) {
-    char tmp[200];
-    display.text().setFont(fonts::rich(fontSize, slot));
-    int w = 0;
-    while (n > 0) {
-        size_t k = n < sizeof tmp - 1 ? n : sizeof tmp - 1;
-        memcpy(tmp, s, k);
-        tmp[k] = 0;
-        w += display.text().getUTF8Width(tmp);
-        s += k;
-        n -= k;
-    }
-    return w;
+    const xff::Face* f = fonts::rich(fontSize, slot);
+    return f ? f->width(s, n) : 0;
 }
 
 rich::Metrics metrics(int slot) {
-    display.text().setFont(fonts::rich(fontSize, slot));
-    return {display.text().getFontAscent(), -display.text().getFontDescent()};
+    const xff::Face* f = fonts::rich(fontSize, slot);
+    return f ? rich::Metrics{f->ascent(), f->descent()} : rich::Metrics{};
 }
 
 int textWidth() { return display.width() - 2 * MARGIN_X; }
@@ -215,8 +205,7 @@ bool EpubBook::paginate() {
     display.setPortrait(true);
     display.clear();
     display.text().setFont(fonts::ui());
-    display.text().setCursor(MARGIN_X, 60);
-    display.text().print("Laying out pages ...");
+    display.text().drawUTF8(MARGIN_X, 60, "Laying out pages ...");
     display.show(true);
 
     starts_.clear();
@@ -253,13 +242,13 @@ void EpubBook::loadHyphenation() {
     hyphId_ = hyphenation::load(lang_.c_str(), hyph_);
 }
 
-// Index cache layout: "EIX2", etx size, font, width, height, hyphenation id, count, starts[count]
+// Index cache layout: "EIX3", etx size, font key, width, height, hyphenation id, count, starts[count]
 bool EpubBook::loadIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".eix"), FILE_READ);
     if (!f) return false;
     uint32_t hdr[7];
     if (f.read((uint8_t*)hdr, sizeof hdr) != sizeof hdr) return false;
-    if (hdr[0] != 0x32584945 || hdr[1] != etxSize_ || hdr[2] != font_ || hdr[3] != uint32_t(textWidth()) ||
+    if (hdr[0] != 0x33584945 || hdr[1] != etxSize_ || hdr[2] != fonts::cacheKey(font_) || hdr[3] != uint32_t(textWidth()) ||
         hdr[4] != uint32_t(textHeight()) || hdr[5] != hyphId_ || hdr[6] == 0 || hdr[6] > etxSize_)
         return false;
     starts_.resize(hdr[6]);
@@ -270,7 +259,7 @@ bool EpubBook::loadIndex() {
 void EpubBook::saveIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".eix"), FILE_WRITE);
     if (!f) return;
-    uint32_t hdr[7] = {0x32584945, etxSize_, font_, uint32_t(textWidth()), uint32_t(textHeight()), hyphId_,
+    uint32_t hdr[7] = {0x33584945, etxSize_, fonts::cacheKey(font_), uint32_t(textWidth()), uint32_t(textHeight()), hyphId_,
                        uint32_t(starts_.size())};
     f.write((uint8_t*)hdr, sizeof hdr);
     f.write((uint8_t*)starts_.data(), starts_.size() * sizeof(Start));

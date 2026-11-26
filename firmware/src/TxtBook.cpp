@@ -12,17 +12,8 @@ static constexpr uint32_t LOOKBACK = 16;    // bytes before the page start, for 
 static char window[WINDOW + 1];
 
 static int measure(const char* s, size_t n) {
-    char tmp[200];
-    int w = 0;
-    while (n > 0) {
-        size_t k = n < sizeof tmp - 1 ? n : sizeof tmp - 1;
-        memcpy(tmp, s, k);
-        tmp[k] = 0;
-        w += display.text().getUTF8Width(tmp);
-        s += k;
-        n -= k;
-    }
-    return w;
+    const xff::Face* f = display.text().font();
+    return f ? f->width(s, n) : 0;
 }
 
 static int textWidth() { return display.width() - 2 * MARGIN_X; }
@@ -93,8 +84,7 @@ uint32_t TxtBook::readWindow(uint32_t pos, uint32_t& winStart) {
 bool TxtBook::paginate() {
     display.clear();
     display.text().setFont(fonts::ui());
-    display.text().setCursor(MARGIN_X, 60);
-    display.text().print("Preparing book ...");
+    display.text().drawUTF8(MARGIN_X, 60, "Preparing book ...");
     display.show(true);
     applyFont();
 
@@ -122,14 +112,14 @@ bool TxtBook::paginate() {
     return true;
 }
 
-// Index cache layout: "TIX2", size, font, width, lines, hyphenation id, count, starts[count]
+// Index cache layout: "TIX3", size, font key, width, lines, hyphenation id, count, starts[count]
 bool TxtBook::loadIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".tix"), FILE_READ);
     if (!f) return false;
     uint32_t hdr[7];
     if (f.read((uint8_t*)hdr, sizeof hdr) != sizeof hdr) return false;
     layout::Layout lay = makeLayout();
-    if (hdr[0] != 0x32584954 || hdr[1] != size_ || hdr[2] != font_ || hdr[3] != uint32_t(lay.params().width) ||
+    if (hdr[0] != 0x33584954 || hdr[1] != size_ || hdr[2] != fonts::cacheKey(font_) || hdr[3] != uint32_t(lay.params().width) ||
         hdr[4] != uint32_t(lay.params().maxLines) || hdr[5] != hyphId_ || hdr[6] == 0 || hdr[6] > size_)
         return false;
     starts_.resize(hdr[6]);
@@ -141,7 +131,7 @@ void TxtBook::saveIndex() {
     File f = storage::fs().open(storage::cacheFile(path_, ".tix"), FILE_WRITE);
     if (!f) return;
     layout::Layout lay = makeLayout();
-    uint32_t hdr[7] = {0x32584954, size_, font_, uint32_t(lay.params().width), uint32_t(lay.params().maxLines),
+    uint32_t hdr[7] = {0x33584954, size_, fonts::cacheKey(font_), uint32_t(lay.params().width), uint32_t(lay.params().maxLines),
                        hyphId_, uint32_t(starts_.size())};
     f.write((uint8_t*)hdr, sizeof hdr);
     f.write((uint8_t*)starts_.data(), starts_.size() * sizeof(uint32_t));

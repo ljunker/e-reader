@@ -4,6 +4,7 @@
 
 #include "Buttons.h"
 #include "Display.h"
+#include "Fonts.h"
 #include "Power.h"
 #include "Storage.h"
 #include "Ui.h"
@@ -36,6 +37,7 @@ void setup() {
     display.begin(!fromSleep);
     String err;
     storage::begin(err);
+    fonts::begin();
     usbdrive::begin();
 
     if (fromSleep && rtcPath[0] && err.isEmpty() && ui.resume(rtcPath, rtcPos)) {

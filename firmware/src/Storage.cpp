@@ -134,6 +134,10 @@ bool sleepCover() { return prefs.getBool("sleepcov", true); }
 void setSleepCover(bool v) { prefs.putBool("sleepcov", v); }
 bool hyphenate() { return prefs.getBool("hyph", true); }
 void setHyphenate(bool v) { prefs.putBool("hyph", v); }
+String fontFamily() { return prefs.getString("family", ""); }
+void setFontFamily(const String& v) {
+    if (fontFamily() != v) prefs.putString("family", v);
+}
 
 String cacheFile(const String& bookPath, const char* suffix) {
     char name[24];

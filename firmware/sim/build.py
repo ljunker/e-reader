@@ -135,6 +135,7 @@ def copy_web(target=None, source=None, env=env):
     hyph = os.path.join(PROJECT, "..", "sdcard", "hyph")
     for name in ("de.hyp", "en.hyp"):
         shutil.copy2(os.path.join(hyph, name), os.path.join(samples, name))
+    shutil.copy2(os.path.join(PROJECT, "..", "sdcard", "fonts", "literata.xff"), os.path.join(samples, "literata.xff"))
     print("Simulator page: %s" % os.path.join(WEB_OUT, "index.html"))
 
 

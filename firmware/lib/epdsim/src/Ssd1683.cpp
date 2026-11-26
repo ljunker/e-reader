@@ -15,6 +15,7 @@ void Ssd1683::defaults() {
     xCount_ = yCount_ = 0;
     updateSeq_ = 0xff;
     updateCtrl_ = 0;
+    lutLoaded_ = false;
 }
 
 void Ssd1683::powerLoss() {
@@ -55,9 +56,12 @@ void Ssd1683::command(uint8_t c, uint32_t nowMs) {
         case 0x20:   // master activation
             activate(nowMs);
             break;
+        case 0x32:   // waveform (LUT) from the host instead of the OTP
+            lutLoaded_ = true;
+            break;
         case 0x01: case 0x03: case 0x04: case 0x0C: case 0x10: case 0x11:
         case 0x18: case 0x1A: case 0x21: case 0x22: case 0x24: case 0x26:
-        case 0x2C: case 0x32: case 0x3C: case 0x44: case 0x45: case 0x4E: case 0x4F:
+        case 0x2C: case 0x3C: case 0x3F: case 0x44: case 0x45: case 0x4E: case 0x4F:
             break;
         default:
             unknown_++;
@@ -137,12 +141,18 @@ void Ssd1683::activate(uint32_t nowMs) {
     if ((s & 0x40) && !analogOn_) ms += kPowerOnMs;
     if (s & 0x40) analogOn_ = true;
     if (s & 0x04) {
-        Refresh kind = (s & 0x08) ? Refresh::Partial : Refresh::Full;
-        uint32_t t = kind == Refresh::Full ? kFullMs : kPartialMs;
+        Refresh kind = lutLoaded_ ? Refresh::Gray : (s & 0x08) ? Refresh::Partial : Refresh::Full;
+        uint32_t t = kind == Refresh::Gray ? kGrayMs : kind == Refresh::Full ? kFullMs : kPartialMs;
         // a power-on in the same sequence is part of the refresh time GxEPD2 expects
         ms = t;
         refreshes_++;
-        if (onRefresh) onRefresh(bw_, kind, uint32_t(float(t) * timeScale));
+        const uint8_t* frame = bw_;
+        if (kind == Refresh::Gray) {
+            for (int y = 0; y < kHeight; y++)
+                for (int x = 0; x < kWidth; x++) levels_[y * kWidth + x] = level(x, y);
+            frame = levels_;
+        }
+        if (onRefresh) onRefresh(frame, kind, uint32_t(float(t) * timeScale));
     }
     if (s & 0x02) {
         if (!(s & 0x04)) ms += kPowerOffMs;

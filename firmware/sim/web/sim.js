@@ -8,6 +8,7 @@ const PANEL_W = 400, PANEL_H = 300, STRIDE = PANEL_W / 8;
 const EXT1 = 3;                       // ESP_SLEEP_WAKEUP_EXT1
 const SAMPLES = ['sample.epub', 'sample2.epub', 'drm.epub'];
 const HYPHENATION = ['de.hyp', 'en.hyp'];   // sdcard/hyph in the repository
+const FONTS = ['literata.xff'];             // sdcard/fonts
 const WIFI_SAMPLE = '# One network per line: SSID = key (empty for an open network)\nSimulator WLAN =\n';
 const SAMPLE_TXT = `Welcome to the e-reader simulator
 
@@ -53,26 +54,39 @@ function paint(fill) {
 // Panel RAM is 400 × 300 (landscape). The module sits with its flex cable at
 // the top of the case, so GxEPD2 rotation 1 is upright portrait here:
 // screen (x, y) = panel (399 - y, x).
+// Returns a level per screen pixel, 0 = ink .. 3 = paper.
 function ramToScreen(ram) {
   const px = new Uint8Array(300 * 400);
   for (let y = 0; y < 400; y++) {
     const panelX = PANEL_W - 1 - y;
     const byte = panelX >> 3, bit = 0x80 >> (panelX & 7);
-    for (let x = 0; x < 300; x++) px[y * 300 + x] = (ram[x * STRIDE + byte] & bit) ? 1 : 0;
+    for (let x = 0; x < 300; x++) px[y * 300 + x] = (ram[x * STRIDE + byte] & bit) ? 3 : 0;
   }
   return px;
 }
 
+// 4-gray refresh: one level (0 black .. 3 white) per panel pixel.
+function levelsToScreen(levels) {
+  const px = new Uint8Array(300 * 400);
+  for (let y = 0; y < 400; y++) {
+    const panelX = PANEL_W - 1 - y;
+    for (let x = 0; x < 300; x++) px[y * 300 + x] = levels[x * PANEL_W + panelX];
+  }
+  return px;
+}
+
+const SHADES = [0, 1, 2, 3].map((l) => INK.map((c, k) => Math.round(c + (PAPER[k] - c) * l / 3)));
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function refresh(ram, kind, ms) {
-  const px = ramToScreen(ram);
-  const show = () => paint((i) => (px[i] ? PAPER : INK));
+  const px = kind === 2 ? levelsToScreen(ram) : ramToScreen(ram);
+  const show = () => paint((i) => SHADES[px[i]]);
   animation = animation.then(async () => {
     if (ms <= 0) return show();
     setState('busy');
-    if (kind === 0) {
-      // full refresh: the panel flashes inverted, black, white, then the picture
+    if (kind !== 1) {
+      // full and 4-gray refresh: the panel flashes inverted, black, white, then the picture
       const old = new Uint8Array(300 * 400);
       for (let i = 0; i < old.length; i++) old[i] = glass.data[i * 4] > 128 ? 1 : 0;
       const step = ms / 4;
@@ -292,7 +306,8 @@ const CARD = '/sdcard';
 async function seedCard(inst) {
   const FS = inst.FS;
   const empty = FS.readdir(CARD).length <= 2;   // only . and ..
-  await seedHyphenation(FS);
+  await seedFolder(FS, 'hyph', HYPHENATION);
+  await seedFolder(FS, 'fonts', FONTS);
   if (!empty) return;
   log('First start: putting sample books and a wifi.txt on the card.');
   FS.mkdir(CARD + '/books');
@@ -306,15 +321,15 @@ async function seedCard(inst) {
   FS.writeFile(`${CARD}/wifi.txt`, WIFI_SAMPLE);
 }
 
-// Hyphenation patterns, also on cards from before they existed.
-async function seedHyphenation(FS) {
-  if (FS.analyzePath(CARD + '/hyph').exists) return;
-  FS.mkdir(CARD + '/hyph');
-  for (const name of HYPHENATION) {
+// Hyphenation patterns and fonts, also on cards from before they existed.
+async function seedFolder(FS, dir, names) {
+  if (FS.analyzePath(`${CARD}/${dir}`).exists) return;
+  FS.mkdir(`${CARD}/${dir}`);
+  for (const name of names) {
     try {
       const r = await fetch('samples/' + name);
-      if (r.ok) FS.writeFile(`${CARD}/hyph/${name}`, new Uint8Array(await r.arrayBuffer()));
-    } catch { /* offline: no hyphenation */ }
+      if (r.ok) FS.writeFile(`${CARD}/${dir}/${name}`, new Uint8Array(await r.arrayBuffer()));
+    } catch { /* offline: left out */ }
   }
 }
 

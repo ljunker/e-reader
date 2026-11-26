@@ -326,6 +326,10 @@ void Ui::showMenu() {
             menu_.push_back({String("Font size: ") + fonts::sizeName(fs) + "  (smaller)", &Ui::actFontSmaller});
             menu_.push_back({String("Font size: ") + fonts::sizeName(fs) + "  (larger)", &Ui::actFontLarger});
         }
+    }
+    if (beforeMenu_ != Screen::Reader || !book_->fullScreen())
+        menu_.push_back({String("Font: ") + fonts::family(), &Ui::actFont});
+    if (beforeMenu_ == Screen::Reader) {
         if (!book_->toc().empty()) menu_.push_back({"Contents", &Ui::actContents});
         menu_.push_back({"Go to start", &Ui::actToStart});
         menu_.push_back({"Library", &Ui::actLibrary});
@@ -425,7 +429,19 @@ void Ui::actLibrary() {
     showLibrary(true);
 }
 
+void Ui::actFont() {
+    fonts::nextFamily();
+    if (beforeMenu_ != Screen::Reader) {
+        showMenu();
+        return;
+    }
+    book_->relayout();
+    updateChapters();
+    showReader(true);
+}
+
 void Ui::actRescan() {
+    fonts::begin();   // the card's /fonts may have changed
     reloadBooks("");
     showLibrary(true);
 }
