@@ -82,11 +82,15 @@ module back_shell() {
         }
         screw_holes();
         // engraved label on the back (outside handed() so it stays readable)
-        translate([case_w / 2, case_h / 2, case_d - 0.4])
-            linear_extrude(1) text("e-reader", size = 7, halign = "center", valign = "center");
+        if (label != "")
+            translate([case_w / 2, case_h / 2, case_d - label_depth])
+                linear_extrude(label_depth + 1)
+                    text(label, size = label_size, font = label_font, halign = "center", valign = "center");
     }
 }
 
 print = false;
-if (print) translate([0, 0, case_d]) mirror([0, 0, 1]) back_shell();
+// Turned over about the Y axis (a rotation, not a mirror: mirroring would print
+// the mirror image of the shell, label and port cut-outs included).
+if (print) translate([case_w, 0, case_d]) rotate([0, 180, 0]) back_shell();
 else back_shell();

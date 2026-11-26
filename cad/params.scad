@@ -50,6 +50,14 @@ window_chamfer = 1.2; // 45° chamfer on the front edge of the window
 // NEXT the lower one.
 left_handed = true;
 
+// ---------- label engraved on the back ----------
+// Any text; "" for none. Also settable at build time: make LABEL="My reader".
+// Keep it short enough to fit the back (≈ 90 mm wide at size 7).
+label       = "e-reader";
+label_size  = 7;      // cap height in mm
+label_font  = "Liberation Sans";
+label_depth = 0.4;    // engraving depth
+
 // ---------- case ----------
 wall         = 2.0;   // side wall
 front_t      = 1.6;   // front face thickness

@@ -2,6 +2,9 @@
 # macOS: brew install --cask openscad@snapshot
 OPENSCAD ?= $(shell command -v openscad 2>/dev/null || echo /Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD)
 FLAGS = --backend=manifold
+# Optional text engraved on the back, e.g. make LABEL="Night Reader". Default: label in params.scad.
+LABEL ?=
+LABEL_FLAG = $(if $(LABEL),-D 'label="$(LABEL)"')
 
 PARTS = bezel chassis back buttons fit_test
 STLS  = $(addprefix stl/,$(addsuffix .stl,$(PARTS)))
@@ -10,7 +13,11 @@ all: $(STLS) check
 
 stl/%.stl: %.scad params.scad common.scad
 	@mkdir -p stl
-	$(OPENSCAD) $(FLAGS) -D print=true -o $@ $<
+	$(OPENSCAD) $(FLAGS) -D print=true $(LABEL_FLAG) -o $@ $<
+
+# A label from the command line always re-exports the back shell.
+stl/back.stl: $(if $(LABEL),FORCE)
+FORCE:
 
 # Fails if any printed part overlaps an electronics stand-in or another part.
 check: assembly.scad params.scad common.scad bezel.scad chassis.scad back.scad check.py
@@ -37,4 +44,4 @@ steps: assembly.scad params.scad common.scad bezel.scad chassis.scad back.scad b
 clean:
 	rm -rf stl renders
 
-.PHONY: all check png steps clean
+.PHONY: all check png steps clean FORCE
