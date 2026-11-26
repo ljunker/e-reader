@@ -229,6 +229,83 @@ void test_quote_and_list_indents() {
     TEST_ASSERT_EQUAL(19, lines[1].avail);
 }
 
+// Fake hyphenation: a break every 3 bytes, and after every '-'.
+static int every3(const char* s, size_t n, uint16_t* out, int max) {
+    int c = 0;
+    for (size_t i = 1; i < n && c < max; i++)
+        if (i % 3 == 0 || s[i - 1] == '-') out[c++] = uint16_t(i);
+    return c;
+}
+
+void test_hyphenates_long_word() {
+    Env e = env(10, 100);
+    e.hyphenate = every3;
+    Layout lay(e);
+    std::string t = para(etx::Body) + "aaa bbbbbbbbb";
+    uint32_t next;
+    State st;
+    auto lines = pageOf(lay, t, 0, State(), next, st);
+    TEST_ASSERT_EQUAL(2, lines.size());
+    TEST_ASSERT_TRUE(lines[0].hyphen);
+    TEST_ASSERT_TRUE(lines[0].justify);
+    TEST_ASSERT_EQUAL_STRING("aaa bbb", t.substr(lines[0].start, lines[0].end - lines[0].start).c_str());
+    std::vector<Run> runs;
+    lay.runs(t.data(), lines[0], runs);
+    TEST_ASSERT_EQUAL(3, runs.size());
+    TEST_ASSERT_EQUAL(0, runs[0].x);
+    TEST_ASSERT_EQUAL(6, runs[1].x);   // "bbb-" ends at the right edge
+    TEST_ASSERT_TRUE(runs[2].hyphen);
+    TEST_ASSERT_EQUAL(9, runs[2].x);
+    TEST_ASSERT_FALSE(lines[1].hyphen);
+    TEST_ASSERT_EQUAL_STRING("bbbbbb", t.substr(lines[1].start, lines[1].end - lines[1].start).c_str());
+    TEST_ASSERT_EQUAL(t.size(), next);
+}
+
+void test_hyphen_keeps_style_inside_word() {
+    Env e = env(10, 100);
+    e.hyphenate = every3;
+    Layout lay(e);
+    std::string t = para(etx::Body) + "x bb" + style(etx::kBold) + "cccccc";
+    uint32_t next;
+    State st;
+    auto lines = pageOf(lay, t, 0, State(), next, st);
+    TEST_ASSERT_EQUAL(2, lines.size());
+    TEST_ASSERT_TRUE(lines[0].hyphen);
+    std::vector<Run> runs;
+    lay.runs(t.data(), lines[0], runs);
+    TEST_ASSERT_TRUE(runs.back().hyphen);
+    TEST_ASSERT_TRUE(runs.back().font & etx::kBold);
+    TEST_ASSERT_EQUAL(etx::kBold, lines[1].state.style);
+    TEST_ASSERT_EQUAL_STRING("ccccc", plain(t, lay, lines[1]).c_str());
+}
+
+void test_break_after_existing_dash_adds_none() {
+    Env e = env(8, 100);
+    e.hyphenate = every3;
+    Layout lay(e);
+    std::string t = para(etx::Body) + "aaa ab-cdefgh";
+    uint32_t next;
+    State st;
+    auto lines = pageOf(lay, t, 0, State(), next, st);
+    TEST_ASSERT_FALSE(lines[0].hyphen);
+    TEST_ASSERT_EQUAL_STRING("aaa ab-", t.substr(lines[0].start, lines[0].end - lines[0].start).c_str());
+}
+
+void test_page_starts_inside_word() {
+    Env e = env(10, 10);   // one line per page
+    e.hyphenate = every3;
+    Layout lay(e);
+    std::string t = para(etx::Body) + "aaa bbbbbbbbb";
+    uint32_t n1, n2;
+    State s1, s2;
+    auto p1 = pageOf(lay, t, 0, State(), n1, s1);
+    TEST_ASSERT_EQUAL(1, p1.size());
+    auto p2 = pageOf(lay, t, n1, s1, n2, s2);
+    TEST_ASSERT_EQUAL(1, p2.size());
+    TEST_ASSERT_EQUAL_STRING("bbbbbb", plain(t, lay, p2[0]).c_str());
+    TEST_ASSERT_EQUAL(0, p2[0].firstIndent);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_wraps_and_justifies);
@@ -242,5 +319,9 @@ int main(int, char**) {
     RUN_TEST(test_long_word_is_cut);
     RUN_TEST(test_stops_before_incomplete_word);
     RUN_TEST(test_quote_and_list_indents);
+    RUN_TEST(test_hyphenates_long_word);
+    RUN_TEST(test_hyphen_keeps_style_inside_word);
+    RUN_TEST(test_break_after_existing_dash_adds_none);
+    RUN_TEST(test_page_starts_inside_word);
     return UNITY_END();
 }

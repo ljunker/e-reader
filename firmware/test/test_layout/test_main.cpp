@@ -107,6 +107,57 @@ void test_mid_paragraph_start_detection() {
     TEST_ASSERT_FALSE(lines[0].paraStart);
 }
 
+static int every3(const char* s, size_t n, uint16_t* out, int max) {
+    int c = 0;
+    for (size_t i = 1; i < n && c < max; i++)
+        if (i % 3 == 0 || s[i - 1] == '-') out[c++] = uint16_t(i);
+    return c;
+}
+
+void test_hyphenates_long_word() {
+    Params p{10, 0, 20};
+    p.hyphenate = every3;
+    Layout lay(mono, p);
+    const char* t = "aaa bbbbbbbbb ccc";
+    std::vector<Line> lines;
+    lay.page(t, strlen(t), 0, true, true, lines);
+    TEST_ASSERT_EQUAL(2, lines.size());
+    TEST_ASSERT_TRUE(lines[0].hyphen);
+    TEST_ASSERT_EQUAL_STRING("aaa bbb", text(t, lines[0]).c_str());
+    TEST_ASSERT_EQUAL_STRING("bbbbbb ccc", text(t, lines[1]).c_str());
+    TEST_ASSERT_FALSE(lines[1].paraStart);
+    std::vector<Word> words;
+    lay.placeWords(t, lines[0], true, words);
+    TEST_ASSERT_EQUAL(2, words.size());
+    TEST_ASSERT_TRUE(words[1].hyphen);
+    TEST_ASSERT_EQUAL(6, words[1].x);   // "bbb-" ends at the right edge
+}
+
+void test_hyphen_after_existing_dash() {
+    Params p{8, 0, 20};
+    p.hyphenate = every3;
+    Layout lay(mono, p);
+    const char* t = "aaa ab-cdefgh";
+    std::vector<Line> lines;
+    lay.page(t, strlen(t), 0, true, true, lines);
+    TEST_ASSERT_FALSE(lines[0].hyphen);
+    TEST_ASSERT_EQUAL_STRING("aaa ab-", text(t, lines[0]).c_str());
+}
+
+void test_page_start_inside_word_is_no_paragraph() {
+    Params p{10, 2, 1};
+    p.hyphenate = every3;
+    Layout lay(mono, p);
+    const char* t = "aa bbbbbbbbb";
+    std::vector<Line> p1, p2;
+    uint32_t n1 = lay.page(t, strlen(t), 0, true, true, p1);
+    lay.page(t, strlen(t), n1, true, true, p2);
+    TEST_ASSERT_TRUE(p1[0].hyphen);
+    TEST_ASSERT_EQUAL_STRING("aa bbb", text(t, p1[0]).c_str());
+    TEST_ASSERT_FALSE(p2[0].paraStart);
+    TEST_ASSERT_EQUAL_STRING("bbbbbb", text(t, p2[0]).c_str());
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_wraps_words);
@@ -116,5 +167,8 @@ int main() {
     RUN_TEST(test_stops_at_buffer_end_without_eof);
     RUN_TEST(test_justify);
     RUN_TEST(test_mid_paragraph_start_detection);
+    RUN_TEST(test_hyphenates_long_word);
+    RUN_TEST(test_hyphen_after_existing_dash);
+    RUN_TEST(test_page_start_inside_word_is_no_paragraph);
     return UNITY_END();
 }

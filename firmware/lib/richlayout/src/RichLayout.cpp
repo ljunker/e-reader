@@ -11,6 +11,7 @@ static inline bool endsWord(char c) { return c == ' ' || (uint8_t(c) < 0x20 && c
 Layout::Layout(Env env) : env_(std::move(env)) {
     for (int f = 0; f < etx::kFontSlots; f++) {
         spaceW_[f] = std::max(1, env_.measure(f, " ", 1));
+        hyphenW_[f] = env_.measure(f, "-", 1);
         metrics_[f] = env_.metrics(f);
     }
 }
@@ -30,6 +31,48 @@ int Layout::wordWidth(const char* buf, uint32_t from, uint32_t to, State st) con
     }
     if (to > seg) w += env_.measure(etx::fontFor(st.block, st.style), buf + seg, to - seg);
     return w;
+}
+
+// Break the word buf[from..to) (style `ws` at `from`, starting at x) at the
+// last hyphenation point whose first part, with its "-", still fits.
+bool Layout::hyphenate(const char* buf, uint32_t from, uint32_t to, State ws, int x, int avail, uint32_t& pos,
+                       State& st, Line& line) const {
+    if (!env_.hyphenate || Block::decode(ws.block).kind == etx::Pre) return false;
+    // the word without style codes, and where each of its bytes sits in buf
+    char plain[128];
+    uint32_t at[128];
+    uint8_t style[128];
+    size_t n = 0;
+    State cs = ws;
+    for (uint32_t p = from; p < to;) {
+        if (buf[p] == etx::kStyle) {
+            cs.style = uint8_t(buf[p + 1]) & 3;
+            p += 2;
+            continue;
+        }
+        if (n == sizeof plain) return false;
+        plain[n] = buf[p];
+        at[n] = p;
+        style[n] = cs.style;
+        n++;
+        p++;
+    }
+    uint16_t breaks[32];
+    for (int k = env_.hyphenate(plain, n, breaks, 32); k-- > 0;) {
+        size_t b = breaks[k];
+        if (b == 0 || b >= n) continue;
+        bool dash = plain[b - 1] != '-';
+        int w = wordWidth(buf, from, at[b], ws);
+        if (dash) w += hyphenW_[etx::fontFor(ws.block, style[b - 1])];
+        if (x + w > avail) continue;
+        pos = at[b];
+        st = ws;
+        st.style = style[b];   // including style codes right before the break
+        line.end = pos;
+        line.hyphen = dash;
+        return true;
+    }
+    return false;
 }
 
 Layout::End Layout::fillLine(const char* buf, uint32_t len, uint32_t& pos, State& st, bool eof, bool paraStart,
@@ -89,6 +132,10 @@ Layout::End Layout::fillLine(const char* buf, uint32_t len, uint32_t& pos, State
         int w = wordWidth(buf, wstart, p, ws);
         int need = (any ? spaceW : 0) + w;
         if (x + need > line.avail) {
+            if (hyphenate(buf, wstart, p, ws, x + (any ? spaceW : 0), line.avail, pos, st, line)) {
+                any = true;
+                return End::Width;
+            }
             if (any) return End::Width;   // wrap before this word
             // a single word wider than the line: break it between characters
             uint32_t q = wstart, good = wstart;
@@ -292,6 +339,8 @@ void Layout::runs(const char* buf, const Line& line, std::vector<Run>& out) cons
     }
     size_t n = wordW.size();
     if (n == 0) return;
+    int hyFont = segs.empty() ? etx::fontFor(line.state.block, 0) : segs.back().font;
+    if (line.hyphen) wordW.back() += hyphenW_[hyFont];
     int total = 0;
     for (int w : wordW) total += w;
     int spaceW = spaceW_[etx::fontFor(line.state.block, 0)];
@@ -314,6 +363,7 @@ void Layout::runs(const char* buf, const Line& line, std::vector<Run>& out) cons
             out.push_back({segs[s].start, segs[s].end, sx, segs[s].font});
             sx += segs[s].w;
         }
+        if (line.hyphen && k + 1 == n) out.push_back({line.end, line.end, sx, hyFont, true});
         x += wordW[k] + gap + (int(k) < rem ? 1 : 0);
     }
 }

@@ -37,6 +37,10 @@ struct Env {
     int blockIndent = 16;   // blockquotes (both sides) and list items (left)
     int leading = 4;        // extra space between lines
     int paraGap = 8;        // before spaceBefore blocks, around pictures
+    // Optional: writes up to `max` byte offsets inside a UTF-8 word (no control
+    // codes) where it may be broken, ascending, and returns how many. A "-" is
+    // drawn at the break unless the word already has one there.
+    std::function<int(const char* s, size_t n, uint16_t* out, int max)> hyphenate;
 };
 
 struct Line {
@@ -49,6 +53,7 @@ struct Line {
     int avail = 0;                  // line box width
     int firstIndent = 0;            // first line of a paragraph
     bool justify = false;           // stretch the gaps to `avail`
+    bool hyphen = false;            // ends inside a word: draw a "-" after it
     bool image = false;
     uint32_t imageIndex = 0;
     int imageW = 0, imageH = 0;
@@ -58,6 +63,7 @@ struct Run {
     uint32_t start, end;   // text bytes without control codes
     int x;                 // relative to the text area
     int font;
+    bool hyphen = false;   // draw "-" here instead (start == end)
 };
 
 class Layout {
@@ -82,9 +88,12 @@ private:
     End fillLine(const char* buf, uint32_t len, uint32_t& pos, State& st, bool eof, bool paraStart,
                  Line& line, bool& any) const;
     int wordWidth(const char* buf, uint32_t from, uint32_t to, State st) const;
+    bool hyphenate(const char* buf, uint32_t from, uint32_t to, State ws, int x, int avail, uint32_t& pos,
+                   State& st, Line& line) const;
     Env env_;
     int spaceW_[etx::kFontSlots];
     Metrics metrics_[etx::kFontSlots];
+    int hyphenW_[etx::kFontSlots];
 };
 
 }  // namespace rich

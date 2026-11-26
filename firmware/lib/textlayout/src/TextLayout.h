@@ -23,17 +23,23 @@ struct Line {
     uint32_t end;
     bool paraStart;   // first line of a paragraph (gets the indent)
     bool paraEnd;     // last line of a paragraph (not justified)
+    bool hyphen = false;   // ends inside a word: draw a "-" after it
 };
 
 struct Params {
     int width = 300;    // line width in pixels
     int indent = 0;     // first-line indent
     int maxLines = 20;  // lines per page
+    // Optional: writes up to `max` byte offsets inside a word where it may be
+    // broken, ascending, and returns how many. A "-" is drawn at the break
+    // unless the word already has one there.
+    std::function<int(const char* s, size_t n, uint16_t* out, int max)> hyphenate;
 };
 
 struct Word {
     uint32_t start, end;
     int x;
+    bool hyphen = false;   // draw "-" right after the word
 };
 
 class Layout {
@@ -57,7 +63,7 @@ private:
     bool isParaStart(const char* buf, uint32_t pos, bool bufStartIsTextStart) const;
     MeasureFn measure_;
     Params p_;
-    int spaceW_;
+    int spaceW_, hyphenW_;
 };
 
 // Length in bytes of the longest prefix of s[0..n) that fits into `width`,

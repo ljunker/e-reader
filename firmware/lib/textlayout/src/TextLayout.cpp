@@ -7,6 +7,7 @@ static inline bool isSpace(char c) { return c == ' ' || c == '\t' || c == '\r' |
 Layout::Layout(MeasureFn measure, Params p) : measure_(std::move(measure)), p_(p) {
     spaceW_ = measure_(" ", 1);
     if (spaceW_ <= 0) spaceW_ = 1;
+    hyphenW_ = measure_("-", 1);
 }
 
 bool Layout::isParaStart(const char* buf, uint32_t pos, bool bufStartIsTextStart) const {
@@ -68,6 +69,25 @@ uint32_t Layout::page(const char* buf, uint32_t len, uint32_t pos, bool eof, boo
             int w = measure_(buf + pos, we - pos);
             int need = (any ? spaceW_ : 0) + w;
             if (x + need > p_.width) {
+                if (p_.hyphenate) {   // the longest first part that fits, with its "-"
+                    uint16_t breaks[32];
+                    int sx = x + (any ? spaceW_ : 0);
+                    bool done = false;
+                    for (int k = p_.hyphenate(buf + pos, we - pos, breaks, 32); k-- > 0 && !done;) {
+                        uint32_t b = breaks[k];
+                        if (b == 0 || b >= we - pos) continue;
+                        bool dash = buf[pos + b - 1] != '-';
+                        if (sx + measure_(buf + pos, b) + (dash ? hyphenW_ : 0) > p_.width) continue;
+                        pos += b;
+                        line.end = pos;
+                        line.hyphen = dash;
+                        done = true;
+                    }
+                    if (done) {
+                        any = true;
+                        break;
+                    }
+                }
                 if (any) break;   // wrap before this word
                 // single word wider than the line: hard break
                 size_t n = fitPrefix(measure_, buf + pos, we - pos, p_.width - x);
@@ -118,6 +138,11 @@ void Layout::placeWords(const char* buf, const Line& line, bool justify, std::ve
     }
     size_t n = out.size() - first;
     if (n == 0) return;
+    if (line.hyphen) {
+        out.back().hyphen = true;
+        out.back().x += hyphenW_;
+        total += hyphenW_;
+    }
     int gaps = int(n) - 1;
     int extra = 0, rem = 0;
     int avail = p_.width - x - total;
