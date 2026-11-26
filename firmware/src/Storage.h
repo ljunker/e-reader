@@ -16,6 +16,11 @@ struct BookEntry {
 namespace storage {
 bool begin(String& error);
 bool cardPresent();
+bool mounted();
+// Stop using the file system while the computer owns the card (USB drive),
+// then mount it again afresh: the host may have changed the FAT under us.
+void suspend();
+bool remount(String& error);
 fs::FS& fs();
 std::vector<BookEntry> listBooks();
 BookKind kindOf(const String& path);
@@ -31,4 +36,6 @@ void setFontSize(uint8_t);
 // "/.reader/<hash><suffix>" for cached data belonging to a book.
 String cacheFile(const String& bookPath, const char* suffix);
 uint32_t hash(const String& s);
+// A book was replaced or deleted: drop its cache files and saved position.
+void forgetBook(const String& path);
 }  // namespace storage
