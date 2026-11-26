@@ -263,10 +263,10 @@ void EpubBook::saveIndex() {
     f.close();
 }
 
-void EpubBook::restore(uint32_t pos) {
+uint32_t EpubBook::pageOf(uint32_t pos) const {
     auto it = std::upper_bound(starts_.begin(), starts_.end(), pos,
                                [](uint32_t p, const Start& s) { return p < s.pos; });
-    page_ = it == starts_.begin() ? 0 : uint32_t(it - starts_.begin() - 1);
+    return it == starts_.begin() ? 0 : uint32_t(it - starts_.begin() - 1);
 }
 
 void EpubBook::relayout() {

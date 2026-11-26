@@ -32,7 +32,11 @@ public:
 
     // Position that survives re-layout (byte offset for text, page for images).
     virtual uint32_t position() const { return page_; }
-    virtual void restore(uint32_t pos) { goTo(int32_t(pos)); }
+    virtual void restore(uint32_t pos) { page_ = pageOf(pos); }
+    // Page that shows `pos` (for chapter starts in the status line).
+    virtual uint32_t pageOf(uint32_t pos) const {
+        return pageCount() == 0 ? 0 : pos < pageCount() ? pos : pageCount() - 1;
+    }
 
     // Font size changed (text books re-paginate).
     virtual void relayout() {}

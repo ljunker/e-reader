@@ -11,6 +11,8 @@ struct BookEntry {
     String name;     // file name without extension
     BookKind kind;
     uint32_t size;
+    uint32_t lastRead = 0;   // order of opening, 0 = never opened
+    uint8_t percent = 0;     // read so far, 100 = finished
 };
 
 namespace storage {
@@ -22,16 +24,24 @@ bool mounted();
 void suspend();
 bool remount(String& error);
 fs::FS& fs();
-std::vector<BookEntry> listBooks();
+// Books in /books and the root. Recently read first if `recentFirst`
+// (books never opened follow by name), else by name.
+std::vector<BookEntry> listBooks(bool recentFirst = false);
 BookKind kindOf(const String& path);
 
-// Per-book reading position (survives power-off), stored in NVS.
+// Per-book reading position and percent read (survive power-off), in NVS.
 uint32_t loadPosition(const String& path);
-void savePosition(const String& path, uint32_t pos);
+void savePosition(const String& path, uint32_t pos, uint8_t percent);
+// The book was opened now: it moves to the top of "recently read".
+void markOpened(const String& path);
 
 // Settings
 uint8_t fontSize();
 void setFontSize(uint8_t);
+bool sortRecent();              // library order: recently read first
+void setSortRecent(bool);
+bool sleepCover();              // sleep screen: the book's cover instead of the page
+void setSleepCover(bool);
 
 // "/.reader/<hash><suffix>" for cached data belonging to a book.
 String cacheFile(const String& bookPath, const char* suffix);

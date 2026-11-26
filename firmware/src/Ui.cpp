@@ -3,8 +3,10 @@
 #include <algorithm>
 
 #include "Display.h"
+#include "Cover.h"
 #include "Fonts.h"
 #include "Power.h"
+#include "Progress.h"
 #include "UsbDrive.h"
 #include "WifiShare.h"
 #include "config.h"
@@ -13,6 +15,7 @@ Ui ui;
 
 static constexpr int ROW_H = 26;
 static constexpr int LIST_TOP = 40;
+static constexpr int BOOK_ROW_H = 66;   // library row with a cover thumbnail
 
 // ---------- drawing helpers ----------
 
@@ -22,36 +25,88 @@ static void batteryLabel(char* out, size_t n) {
     else snprintf(out, n, "%d%%", p);
 }
 
+// Cut a UTF-8 string until it fits into maxW pixels in the current font.
+static void fitText(String& s, int maxW) {
+    auto& t = display.text();
+    while (s.length() > 1 && t.getUTF8Width(s.c_str()) > maxW) {
+        int n = s.length() - 1;
+        while (n > 0 && (uint8_t(s[n]) & 0xC0) == 0x80) n--;   // keep characters whole
+        s.remove(n);
+    }
+}
+
+// Battery symbol (16 × 8) ending at `right`, bottom on `baseline`.
+void Ui::drawBattery(int right, int baseline) {
+    auto& g = display.gfx();
+    int x = right - 16, y = baseline - 8;
+    g.drawRect(x, y, 14, 8, GxEPD_BLACK);
+    g.fillRect(x + 14, y + 2, 2, 4, GxEPD_BLACK);
+    int p = power::batteryPercent();
+    if (p > 0) g.fillRect(x + 2, y + 2, std::max(1, std::min(p, 100) * 10 / 100), 4, GxEPD_BLACK);
+}
+
 void Ui::drawHeader(const char* title) {
     auto& t = display.text();
     t.setFont(fonts::uiBold());
     t.drawUTF8(MARGIN_X, 24, title);
     char bat[8];
     batteryLabel(bat, sizeof bat);
+    int right = display.width() - MARGIN_X;
+    drawBattery(right, 22);
     t.setFont(fonts::small());
-    t.drawUTF8(display.width() - MARGIN_X - t.getUTF8Width(bat), 22, bat);
+    t.drawUTF8(right - 20 - t.getUTF8Width(bat), 22, bat);
     display.gfx().drawFastHLine(MARGIN_X, 31, display.width() - 2 * MARGIN_X, GxEPD_BLACK);
 }
 
+void Ui::updateChapters() {
+    chapterPages_.clear();
+    if (!book_) return;
+    for (const auto& c : book_->toc()) chapterPages_.push_back(book_->pageOf(c.pos));
+}
+
+// Bottom line: chapter (or book) title on the left; pages left in the
+// chapter, page number and battery on the right; above it a progress bar
+// with a tick at every top-level chapter.
 void Ui::drawStatus() {
     auto& t = display.text();
+    auto& g = display.gfx();
     t.setFont(fonts::small());
     int y = display.height() - 5;
-    char right[32], bat[8];
-    batteryLabel(bat, sizeof bat);
-    uint32_t n = book_->pageCount();
-    snprintf(right, sizeof right, "%lu / %lu  %s", (unsigned long)book_->page() + 1, (unsigned long)n, bat);
-    int rw = t.getUTF8Width(right);
-    t.drawUTF8(display.width() - MARGIN_X - rw, y, right);
-    // title, cut to the space that is left
-    String title = book_->title();
-    while (title.length() > 3 && t.getUTF8Width(title.c_str()) > display.width() - 3 * MARGIN_X - rw)
-        title.remove(title.length() - 1);
+    int right = display.width() - MARGIN_X;
+    uint32_t n = book_->pageCount(), page = book_->page();
+    const auto& toc = book_->toc();
+    progress::Chapter ch = progress::locate(chapterPages_, page, n);
+
+    drawBattery(right, y);
+    char info[40];
+    if (toc.empty()) {
+        snprintf(info, sizeof info, "%lu / %lu", (unsigned long)page + 1, (unsigned long)n);
+    } else if (ch.pagesLeft == 0) {
+        snprintf(info, sizeof info, "end of chapter \xc2\xb7 %lu / %lu", (unsigned long)page + 1, (unsigned long)n);
+    } else {
+        snprintf(info, sizeof info, "%lu left \xc2\xb7 %lu / %lu", (unsigned long)ch.pagesLeft,
+                 (unsigned long)page + 1, (unsigned long)n);
+    }
+    int iw = t.getUTF8Width(info);
+    t.drawUTF8(right - 22 - iw, y, info);
+
+    String title = ch.index >= 0 ? toc[ch.index].title : book_->title();
+    fitText(title, right - 22 - iw - 8 - MARGIN_X);
     t.drawUTF8(MARGIN_X, y, title.c_str());
-    // progress bar
+
+    // progress bar: dotted track, solid part read so far, chapter ticks
     int w = display.width() - 2 * MARGIN_X;
-    int filled = n > 1 ? int(int64_t(w) * book_->page() / (n - 1)) : w;
-    display.gfx().drawFastHLine(MARGIN_X, display.height() - STATUS_H + 2, filled, GxEPD_BLACK);
+    int y0 = display.height() - STATUS_H + 2;
+    for (int x = 0; x < w; x += 3) g.drawPixel(MARGIN_X + x, y0 + 1, GxEPD_BLACK);
+    int filled = n > 1 ? int(int64_t(w) * page / (n - 1)) : w;
+    g.fillRect(MARGIN_X, y0, filled, 2, GxEPD_BLACK);
+    if (n > 1 && int(chapterPages_.size()) * 3 < w) {
+        for (size_t i = 0; i < chapterPages_.size(); i++) {
+            if (toc[i].level != 0 || chapterPages_[i] == 0) continue;
+            int x = MARGIN_X + int(int64_t(w) * chapterPages_[i] / (n - 1));
+            g.drawFastVLine(x, y0 - 1, 4, GxEPD_BLACK);
+        }
+    }
 }
 
 // ---------- screens ----------
@@ -62,8 +117,67 @@ void Ui::begin(const String& storageError) {
         showMessage("Storage", storageError + "\n\nInsert a FAT32 card with books in /books and restart.");
         return;
     }
-    books_ = storage::listBooks();
+    reloadBooks("");
     showLibrary(true);
+}
+
+void Ui::reloadBooks(const String& selectPath) {
+    books_ = storage::listBooks(storage::sortRecent());
+    sel_ = 0;
+    for (int i = 0; i < int(books_.size()); i++)
+        if (books_[i].path == selectPath) sel_ = i;
+}
+
+covers::State Ui::drawBookRow(int i, int y, bool selected) {
+    const BookEntry& b = books_[i];
+    auto& g = display.gfx();
+    auto& t = display.text();
+    uint16_t fg = selected ? GxEPD_WHITE : GxEPD_BLACK;
+    if (selected) g.fillRect(MARGIN_X - 4, y, display.width() - 2 * MARGIN_X + 8, BOOK_ROW_H - 2, GxEPD_BLACK);
+
+    const char* kind = b.kind == BookKind::Xtp ? "PDF" : b.kind == BookKind::Epub ? "EPUB" : "TXT";
+    int cx = MARGIN_X, cy = y + (BOOK_ROW_H - 2 - cover::kThumbH) / 2;
+    covers::State st = covers::drawThumb(b, cx, cy);
+    t.setForegroundColor(fg);
+    if (st != covers::State::Present) {   // placeholder: a frame with the format
+        g.drawRect(cx, cy, cover::kThumbW, cover::kThumbH, fg);
+        t.setFont(fonts::small());
+        t.drawUTF8(cx + (cover::kThumbW - t.getUTF8Width(kind)) / 2, cy + cover::kThumbH / 2 + 4, kind);
+    }
+
+    // title on up to two lines, broken at a space
+    int x = cx + cover::kThumbW + 10, w = display.width() - MARGIN_X - x;
+    t.setFont(fonts::ui());
+    String first = b.name, second;
+    if (t.getUTF8Width(first.c_str()) > w) {
+        int cut = -1;
+        for (int k = first.indexOf(' '); k > 0; k = first.indexOf(' ', k + 1)) {
+            if (t.getUTF8Width(first.substring(0, k).c_str()) > w) break;
+            cut = k;
+        }
+        if (cut > 0) {
+            second = first.substring(cut + 1);
+            first.remove(cut);
+        }
+        fitText(first, w);
+        fitText(second, w);
+    }
+    t.drawUTF8(x, y + 20, first.c_str());
+    if (second.length()) t.drawUTF8(x, y + 38, second.c_str());
+
+    char meta[32];
+    if (b.lastRead == 0) snprintf(meta, sizeof meta, "%s \xc2\xb7 new", kind);
+    else if (b.percent >= 100) snprintf(meta, sizeof meta, "%s \xc2\xb7 finished", kind);
+    else snprintf(meta, sizeof meta, "%s \xc2\xb7 %u%%", kind, b.percent);
+    t.setFont(fonts::small());
+    t.drawUTF8(x, y + BOOK_ROW_H - 10, meta);
+    if (b.lastRead && b.percent < 100) {   // small progress bar after the text
+        int bx = x + t.getUTF8Width(meta) + 8, by = y + BOOK_ROW_H - 15, bw = 40;
+        g.drawRect(bx, by, bw, 5, fg);
+        g.fillRect(bx, by, bw * b.percent / 100, 5, fg);
+    }
+    t.setForegroundColor(GxEPD_BLACK);
+    return st;
 }
 
 void Ui::showLibrary(bool full) {
@@ -80,21 +194,34 @@ void Ui::showLibrary(bool full) {
         display.show(full);
         return;
     }
-    drawList(int(books_.size()), sel_, [this](int i, String& label, int&, const char*& tag) {
-        label = books_[i].name;
-        tag = books_[i].kind == BookKind::Xtp ? "PDF" : books_[i].kind == BookKind::Epub ? "EPUB" : "TXT";
-    });
-    display.show(full);
-}
-
-// Cut a UTF-8 string until it fits into maxW pixels in the current font.
-static void fitText(String& s, int maxW) {
-    auto& t = display.text();
-    while (s.length() > 1 && t.getUTF8Width(s.c_str()) > maxW) {
-        int n = s.length() - 1;
-        while (n > 0 && (uint8_t(s[n]) & 0xC0) == 0x80) n--;   // keep characters whole
-        s.remove(n);
+    int perPage = (display.height() - LIST_TOP - 20) / BOOK_ROW_H;
+    int first = (sel_ / perPage) * perPage;
+    int last = std::min(int(books_.size()), first + perPage);
+    auto draw = [&](bool making) {
+        for (int i = first; i < last; i++) {
+            if (drawBookRow(i, LIST_TOP + (i - first) * BOOK_ROW_H, i == sel_) == covers::State::Missing)
+                making = true;
+        }
+        char foot[48];
+        snprintf(foot, sizeof foot, "%d / %d", sel_ + 1, int(books_.size()));
+        t.setFont(fonts::small());
+        t.drawUTF8(MARGIN_X, display.height() - 6, foot);
+        const char* right = making ? "making covers ..." : storage::sortRecent() ? "recently read" : "by title";
+        t.drawUTF8(display.width() - MARGIN_X - t.getUTF8Width(right), display.height() - 6, right);
+        return making;
+    };
+    if (!draw(false)) {
+        display.show(full);
+        return;
     }
+    // Covers are made once per book, the first time it scrolls into view.
+    display.show(full);
+    for (int i = first; i < last; i++)
+        if (covers::state(books_[i]) == covers::State::Missing) covers::build(books_[i]);
+    display.clear();
+    drawHeader("Library");
+    draw(false);
+    display.show();
 }
 
 void Ui::drawList(int count, int sel, const std::function<void(int, String&, int&, const char*&)>& item) {
@@ -203,8 +330,10 @@ void Ui::showMenu() {
         menu_.push_back({"Go to start", &Ui::actToStart});
         menu_.push_back({"Library", &Ui::actLibrary});
     } else {
+        menu_.push_back({storage::sortRecent() ? "Sort: recently read" : "Sort: by title", &Ui::actSort});
         menu_.push_back({"Rescan card", &Ui::actRescan});
     }
+    menu_.push_back({storage::sleepCover() ? "Sleep screen: cover" : "Sleep screen: page", &Ui::actSleepScreen});
     if (storageError_.isEmpty()) menu_.push_back({"Wi-Fi upload", &Ui::actWifi});
     if (usbdrive::available() && usbdrive::hostConnected()) menu_.push_back({"USB drive", &Ui::actUsb});
     menu_.push_back({"Sleep now", &Ui::actSleep});
@@ -238,12 +367,19 @@ void Ui::openSelected() {
         showMessage("Cannot open", books_[sel_].name + "\n\n" + err);
         return;
     }
+    storage::markOpened(book_->path());
     book_->restore(storage::loadPosition(book_->path()));
+    updateChapters();
     showReader(true);
 }
 
+void Ui::savePosition() {
+    if (book_)
+        storage::savePosition(book_->path(), book_->position(), progress::percent(book_->page(), book_->pageCount()));
+}
+
 void Ui::closeBook() {
-    if (book_) storage::savePosition(book_->path(), book_->position());
+    savePosition();
     book_.reset();
     display.setPortrait(true);
 }
@@ -252,8 +388,8 @@ void Ui::turn(int delta) {
     uint32_t before = book_->page();
     book_->goTo(int32_t(before) + delta);
     if (book_->page() == before) return;
-    if (++turnsSinceSave_ >= 10) {
-        storage::savePosition(book_->path(), book_->position());
+    if (++turnsSinceSave_ >= 10 || book_->page() + 1 == book_->pageCount()) {
+        savePosition();
         turnsSinceSave_ = 0;
     }
     showReader();
@@ -263,6 +399,7 @@ void Ui::actFontSmaller() {
     uint8_t s = storage::fontSize();
     if (s > 0) storage::setFontSize(s - 1);
     book_->relayout();
+    updateChapters();
     showReader(true);
 }
 
@@ -270,6 +407,7 @@ void Ui::actFontLarger() {
     uint8_t s = storage::fontSize();
     if (s + 1 < fonts::kSizes) storage::setFontSize(s + 1);
     book_->relayout();
+    updateChapters();
     showReader(true);
 }
 
@@ -279,19 +417,34 @@ void Ui::actToStart() {
 }
 
 void Ui::actLibrary() {
+    String path = book_ ? book_->path() : String();
     closeBook();
+    reloadBooks(path);
     showLibrary(true);
 }
 
 void Ui::actRescan() {
-    books_ = storage::listBooks();
-    sel_ = 0;
+    reloadBooks("");
     showLibrary(true);
 }
 
-void Ui::actSleep() {
-    prepareSleep();
-    power::deepSleep();
+void Ui::actSleep() { sleepRequested_ = true; }
+
+bool Ui::takeSleepRequest() {
+    bool r = sleepRequested_;
+    sleepRequested_ = false;
+    return r;
+}
+
+void Ui::actSort() {
+    storage::setSortRecent(!storage::sortRecent());
+    reloadBooks(books_.empty() ? String() : books_[sel_].path);
+    showMenu();
+}
+
+void Ui::actSleepScreen() {
+    storage::setSleepCover(!storage::sleepCover());
+    showMenu();
 }
 
 void Ui::back() {
@@ -442,7 +595,7 @@ void Ui::handle(const ButtonEvent& e) {
                 case Btn::Prev: tocSel_ = std::max(0, tocSel_ - (e.longPress ? 10 : 1)); showToc(); break;
                 case Btn::Ok:
                     book_->restore(book_->toc()[tocSel_].pos);
-                    storage::savePosition(book_->path(), book_->position());
+                    savePosition();
                     showReader(true);
                     break;
                 case Btn::Back: showMenu(); break;
@@ -474,9 +627,22 @@ void Ui::handle(const ButtonEvent& e) {
 
 // ---------- sleep / resume ----------
 
-void Ui::prepareSleep() {
+bool Ui::prepareSleep() {
+    savePosition();
+    if (storage::sleepCover() && storageError_.isEmpty()) {
+        const BookEntry* e = nullptr;
+        if (book_) {
+            for (const auto& b : books_)
+                if (b.path == book_->path()) e = &b;
+        } else if (screen_ == Screen::Library && !books_.empty()) {
+            e = &books_[sel_];
+        }
+        if (e && covers::drawFull(*e)) {
+            display.show(true);
+            return true;
+        }
+    }
     if (book_) {
-        storage::savePosition(book_->path(), book_->position());
         if (screen_ != Screen::Reader) showReader(true);
         // small "sleeping" mark in the status line so the device does not look frozen
         if (!book_->fullScreen()) {
@@ -494,6 +660,7 @@ void Ui::prepareSleep() {
         display.text().drawUTF8(MARGIN_X, display.height() / 2 + 26, "Press any button to wake up.");
         display.show(true);
     }
+    return false;
 }
 
 void Ui::redraw() {
@@ -505,16 +672,13 @@ const char* Ui::openPath() const { return book_ ? book_->path().c_str() : ""; }
 uint32_t Ui::openPosition() const { return book_ ? book_->position() : 0; }
 
 bool Ui::resume(const char* path, uint32_t position) {
-    books_ = storage::listBooks();
-    for (int i = 0; i < int(books_.size()); i++) {
-        if (books_[i].path != path) continue;
-        sel_ = i;
-        String err;
-        book_ = openBook(books_[i], err);
-        if (!book_) return false;
-        book_->restore(position);
-        screen_ = Screen::Reader;
-        return true;
-    }
-    return false;
+    reloadBooks(path);
+    if (books_.empty() || books_[sel_].path != path) return false;
+    String err;
+    book_ = openBook(books_[sel_], err);
+    if (!book_) return false;
+    book_->restore(position);
+    updateChapters();
+    screen_ = Screen::Reader;
+    return true;
 }

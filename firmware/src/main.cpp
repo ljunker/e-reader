@@ -13,6 +13,7 @@
 // Survives deep sleep: which book was open and where.
 RTC_DATA_ATTR static char rtcPath[160];
 RTC_DATA_ATTR static uint32_t rtcPos;
+RTC_DATA_ATTR static bool rtcCover;   // the panel shows the cover, not the page
 
 static Buttons buttons;
 static uint32_t lastActivity;
@@ -20,7 +21,7 @@ static uint32_t lastActivity;
 static void goToSleep() {
     strlcpy(rtcPath, ui.openPath(), sizeof rtcPath);
     rtcPos = ui.openPosition();
-    ui.prepareSleep();
+    rtcCover = ui.prepareSleep();
     power::deepSleep();
 }
 
@@ -38,9 +39,9 @@ void setup() {
     usbdrive::begin();
 
     if (fromSleep && rtcPath[0] && err.isEmpty() && ui.resume(rtcPath, rtcPos)) {
-        // The panel still shows the page we fell asleep on. A page-turn button
-        // turns the page right away; any other button just redraws it.
-        if (wakeButton == Btn::Next || wakeButton == Btn::Prev) ui.handle({wakeButton, false});
+        // If the panel still shows the page we fell asleep on, a page-turn
+        // button turns the page right away; otherwise the page comes back.
+        if (!rtcCover && (wakeButton == Btn::Next || wakeButton == Btn::Prev)) ui.handle({wakeButton, false});
         else ui.redraw();
     } else {
         ui.begin(err);
@@ -56,6 +57,6 @@ void loop() {
     }
     ui.poll();
     if (ui.busy()) lastActivity = millis();   // no sleep while Wi-Fi or the USB drive is on
-    if (millis() - lastActivity > SLEEP_AFTER_MS && !buttons.anyDown()) goToSleep();
+    if (ui.takeSleepRequest() || (millis() - lastActivity > SLEEP_AFTER_MS && !buttons.anyDown())) goToSleep();
     delay(5);
 }

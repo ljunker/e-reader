@@ -15,7 +15,7 @@ public:
     uint32_t pageCount() const override { return starts_.size(); }
     void render() override;
     uint32_t position() const override { return starts_.empty() ? 0 : starts_[page_].pos; }
-    void restore(uint32_t pos) override;
+    uint32_t pageOf(uint32_t pos) const override;
     void relayout() override;
     const std::vector<TocEntry>& toc() const override { return toc_; }
 
