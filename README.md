@@ -75,6 +75,13 @@ The first time a book is opened, the reader converts it once into cache files in
 After that, opening, turning pages and changing the font size are as fast as with `.txt` files.
 MENU → **Contents** jumps to a chapter.
 
+**Hyphenation:** copy the [`sdcard/hyph/`](sdcard/hyph) folder to the top of the card (`/hyph/de.hyp`, `/hyph/en.hyp`).
+Long words are then broken at line ends, so justified lines get even gaps. The language comes from the EPUB's
+`dc:language`; for TXT files and EPUBs without it the reader guesses German or English from the text. Other
+languages and a card without `/hyph/` still break after hyphens already in a word ("E-Mail-Adresse").
+MENU → **Hyphenation** switches it off. Built with `xtconvert hyph` from the hyph-utf8 patterns in
+`tools/converter/patterns/`. Updating to this firmware converts each EPUB once more on first open.
+
 Supported: EPUB 2 and 3, chapters in reading order, headings, bold and italic, alignment, blockquotes,
 lists, line breaks, page breaks from CSS, JPEG (baseline) and PNG pictures dithered to the panel,
 and the table of contents from the nav document or the NCX.
@@ -107,7 +114,8 @@ The firmware needs one large app partition for Wi‑Fi (`tinyuf2-partitions-4MB-
 - [x] PDF/comic converter and `.xtp` format
 - [x] Firmware: display, buttons, SD, deep sleep + wake on any button, library, TXT reader with justified text and cached pagination, `.xtp` viewer, font sizes, saved positions
 - [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery monitor)
-- [ ] Anti-aliased fonts generated from TTFs, hyphenation
+- [ ] Anti-aliased fonts generated from TTFs
+- [x] Hyphenation (Liang patterns, German and English)
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
 - [x] Wi‑Fi upload page, USB mass storage

@@ -24,7 +24,7 @@ Rule of thumb: **data goes on the microSD card, only code goes into flash.**
 
 | Feature | What it does | Flash | Data | Notes |
 |---|---|---|---|---|
-| Hyphenation (Liang) | Better justified text at 300 px width | ~4 KB | patterns DE/EN on SD (30–100 KB each) | language from `dc:language` |
+| Hyphenation (Liang) | Better justified text at 300 px width | +12.7 KB (measured) | `/hyph/de.hyp` 219 KB, `en.hyp` 29 KB, in PSRAM while a book is open | **done**; language from `dc:language`, guessed for TXT |
 | Footnote popups | EPUB note references open an overlay | ~5–8 KB | – | XHTML parser exists |
 | Reading statistics | Minutes per day, pages per week, streak; chart on the upload page | ~5 KB | log on SD | time from NTP when Wi-Fi is on |
 | Highlights + export | Mark sentence by sentence, download as Markdown over Wi-Fi | ~6–10 KB | SD | sentences are easier than words with 5 buttons |
