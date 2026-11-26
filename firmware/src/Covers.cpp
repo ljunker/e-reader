@@ -116,6 +116,7 @@ bool drawFull(const BookEntry& b) {
     if (!px || !f.seek(info.fullOffset()) || f.read(px.get(), info.fullBytes()) != info.fullBytes()) return false;
     display.setPortrait(true);
     display.clear();
+    display.startGray();   // the sleep screen: the 4-gray refresh time does not matter
     drawPacked(px.get(), info.fullW, info.fullH, (display.width() - info.fullW) / 2,
                (display.height() - info.fullH) / 2);
     return true;

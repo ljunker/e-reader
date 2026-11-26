@@ -52,8 +52,8 @@ cd firmware && pio run -e sim -t serve  # then open http://localhost:8000/
 ```
 `env:sim` compiles everything in `src/` unchanged, with the real GxEPD2, Adafruit GFX and U8g2 libraries
 and String/FS from the arduino-esp32 core, to WebAssembly. Only the hardware underneath is simulated (`firmware/sim/`):
-- **Display:** an SSD1683 model (`lib/epdsim`) receives GxEPD2's SPI commands. It holds BUSY for the real refresh time
-  and shows full refreshes flashing, like the panel does. "Instant refresh" skips the wait.
+- **Display:** an SSD1683 model (`lib/epdsim`) receives GxEPD2's SPI commands and the reader's 4-gray refresh. It holds
+  BUSY for the real refresh time and shows full refreshes flashing, like the panel does. "Instant refresh" skips the wait.
 - **Buttons:** click the caps or use the keys ← PREV, → NEXT, M MENU, Enter OK, Esc BACK. Holding a button gives a
   long press.
 - **microSD and NVS:** kept in the browser's IndexedDB. On first start the card gets the test EPUBs, a short TXT and a
@@ -119,9 +119,9 @@ The firmware needs one large app partition for Wi‑Fi (`tinyuf2-partitions-4MB-
 - [x] PDF/comic converter and `.xtp` format
 - [x] Firmware: display, buttons, SD, deep sleep + wake on any button, library, TXT reader with justified text and cached pagination, `.xtp` viewer, font sizes, saved positions
 - [ ] Bring-up on real hardware (pin check, Rev2.2 `PWR` pin, rotation, battery monitor)
-- [ ] Anti-aliased fonts generated from TTFs
+- [x] Fonts generated from TTFs (`xtconvert font`, loaded from the card), shown in black and white
 - [x] Hyphenation (Liang patterns, German and English)
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
-- [ ] True 4-gray refresh for PDF pages (currently 2×2 dithered B/W)
+- [x] True 4-gray refresh for `.xtp` pages and the sleep-screen cover (about 5.5 s per refresh)
 - [x] Wi‑Fi upload page, USB mass storage
 - [ ] Optional KiCad carrier PCB (draft in tag `carrier-pcb-draft`)

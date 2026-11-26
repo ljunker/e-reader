@@ -54,26 +54,39 @@ function paint(fill) {
 // Panel RAM is 400 × 300 (landscape). The module sits with its flex cable at
 // the top of the case, so GxEPD2 rotation 1 is upright portrait here:
 // screen (x, y) = panel (399 - y, x).
+// Returns a level per screen pixel, 0 = ink .. 3 = paper.
 function ramToScreen(ram) {
   const px = new Uint8Array(300 * 400);
   for (let y = 0; y < 400; y++) {
     const panelX = PANEL_W - 1 - y;
     const byte = panelX >> 3, bit = 0x80 >> (panelX & 7);
-    for (let x = 0; x < 300; x++) px[y * 300 + x] = (ram[x * STRIDE + byte] & bit) ? 1 : 0;
+    for (let x = 0; x < 300; x++) px[y * 300 + x] = (ram[x * STRIDE + byte] & bit) ? 3 : 0;
   }
   return px;
 }
 
+// 4-gray refresh: one level (0 black .. 3 white) per panel pixel.
+function levelsToScreen(levels) {
+  const px = new Uint8Array(300 * 400);
+  for (let y = 0; y < 400; y++) {
+    const panelX = PANEL_W - 1 - y;
+    for (let x = 0; x < 300; x++) px[y * 300 + x] = levels[x * PANEL_W + panelX];
+  }
+  return px;
+}
+
+const SHADES = [0, 1, 2, 3].map((l) => INK.map((c, k) => Math.round(c + (PAPER[k] - c) * l / 3)));
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function refresh(ram, kind, ms) {
-  const px = ramToScreen(ram);
-  const show = () => paint((i) => (px[i] ? PAPER : INK));
+  const px = kind === 2 ? levelsToScreen(ram) : ramToScreen(ram);
+  const show = () => paint((i) => SHADES[px[i]]);
   animation = animation.then(async () => {
     if (ms <= 0) return show();
     setState('busy');
-    if (kind === 0) {
-      // full refresh: the panel flashes inverted, black, white, then the picture
+    if (kind !== 1) {
+      // full and 4-gray refresh: the panel flashes inverted, black, white, then the picture
       const old = new Uint8Array(300 * 400);
       for (let i = 0; i < old.length; i++) old[i] = glass.data[i * 4] > 128 ? 1 : 0;
       const step = ms / 4;

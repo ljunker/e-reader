@@ -48,6 +48,7 @@ bool XtpBook::landscape() const {
 void XtpBook::render() {
     const auto& h = reader_->header();
     display.setPortrait(!landscape());
+    display.startGray();   // pictures in true grays; each page is a 4-gray refresh
     if (reader_->readPage(page_, pageBuf_, scratch_, scratchSize_) != xtp::Error::None) {
         display.text().drawUTF8(10, 40, "Page could not be read");
         return;

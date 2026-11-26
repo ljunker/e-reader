@@ -141,9 +141,11 @@ void SPIClass::transfer(void* data, uint32_t size) {
 
 static struct PanelHook {
     PanelHook() {
-        panel.onRefresh = [](const uint8_t* ram, epdsim::Refresh kind, uint32_t ms) {
-            js_panel_refresh(ram, epdsim::Ssd1683::kStride * epdsim::Ssd1683::kHeight,
-                             kind == epdsim::Refresh::Full ? 0 : 1, int(ms));
+        panel.onRefresh = [](const uint8_t* frame, epdsim::Refresh kind, uint32_t ms) {
+            using P = epdsim::Ssd1683;
+            bool gray = kind == epdsim::Refresh::Gray;
+            js_panel_refresh(frame, gray ? P::kWidth * P::kHeight : P::kStride * P::kHeight,
+                             gray ? 2 : kind == epdsim::Refresh::Full ? 0 : 1, int(ms));
         };
     }
 } panelHook;

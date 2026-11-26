@@ -2,17 +2,21 @@
 #include <GxEPD2_BW.h>
 
 #include "FontFile.h"
+#include "Panel.h"
 
 #include "pins.h"
 
-using Epd = GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT>;
+using Epd = GxEPD2_BW<Panel, Panel::HEIGHT>;
 
 // Draws text in the .xff fonts (see Fonts.h) into the display buffer. The
 // interface follows the U8g2 calls the reader used before. Anti-aliased
 // glyphs are thresholded: ink levels 2 and 3 become the foreground colour.
 class TextRenderer {
 public:
-    void begin(Adafruit_GFX& gfx) { gfx_ = &gfx; }
+    void begin(Adafruit_GFX& gfx, class Display& d) {
+        gfx_ = &gfx;
+        display_ = &d;
+    }
     void setFont(const xff::Face* face) { face_ = face; }
     const xff::Face* font() const { return face_; }
     void setForegroundColor(uint16_t c) { fg_ = c; }
@@ -26,6 +30,7 @@ public:
 private:
     static void plot(void* ctx, int x, int y, uint8_t ink);
     Adafruit_GFX* gfx_ = nullptr;
+    class Display* display_ = nullptr;
     const xff::Face* face_ = nullptr;
     uint16_t fg_ = GxEPD_BLACK;
 };
@@ -42,16 +47,30 @@ public:
     void setPortrait(bool portrait);
     int width() { return epd_.width(); }
     int height() { return epd_.height(); }
-    void clear() { epd_.fillScreen(GxEPD_WHITE); }
+    // Start a new frame in black and white.
+    void clear() {
+        epd_.fillScreen(GxEPD_WHITE);
+        grayFrame_ = false;
+    }
+    // Make the frame just cleared a 4-gray one: grayPixel() and text land in
+    // true grays and show() does a 4-gray refresh (about 5.5 s). For whole-
+    // screen pictures: .xtp pages and the sleep-screen cover. Returns false
+    // (black and white with dithering) if the gray buffer cannot be had.
+    bool startGray();
+    bool grayFrame() const { return grayFrame_; }
 
     // Push the buffer to the panel. Fast partial refresh, with a full refresh
     // every FULL_REFRESH_EVERY updates or when forced.
     void show(bool forceFull = false);
     void requestFullRefresh() { sinceFull_ = 1000; }
 
-    // Draw a 4-level gray pixel (0 = black .. 3 = white) using a 2×2 ordered
-    // dither, since the panel is driven in black/white mode.
+    // Draw a 4-level gray pixel (0 = black .. 3 = white): a true gray in a
+    // gray frame, else a 2×2 ordered dither in black and white.
     inline void grayPixel(int16_t x, int16_t y, uint8_t level) {
+        if (grayFrame_) {
+            setLevel(x, y, level);
+            return;
+        }
         static const uint8_t bayer[2][2] = {{0, 2}, {3, 1}};
         // level 0 → 4/4 black, 1 → 3/4, 2 → 1/4, 3 → 0
         static const uint8_t blackOf4[4] = {4, 3, 1, 0};
@@ -60,8 +79,11 @@ public:
     }
 
 private:
-    Epd epd_{GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)};
+    Epd epd_{Panel(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)};
     TextRenderer text_;
+    void setLevel(int16_t x, int16_t y, uint8_t level);
+    uint8_t* levels_ = nullptr;   // gray frame, 2 bits per pixel in panel order (PSRAM)
+    bool grayFrame_ = false;
     int sinceFull_ = 1000;
     bool initialised_ = false;
 };
