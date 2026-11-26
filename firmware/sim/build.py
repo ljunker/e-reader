@@ -46,7 +46,7 @@ env.Replace(**EMSCRIPTEN)
 # their `#include "Arduino.h"` finds the simulator's Arduino.h.
 core_pkg = os.path.join(env.subst("$PROJECT_PACKAGES_DIR"), "framework-arduinoespressif32")
 if not os.path.isdir(core_pkg):
-    fail("framework-arduinoespressif32 is missing; run `pio pkg install -e feather_s3` once.")
+    fail("framework-arduinoespressif32 is missing; run `pio pkg install -e feathers3d` once.")
 CORE_FILES = {
     "cores/esp32": ["WString.h", "WString.cpp", "Print.h", "Print.cpp", "Printable.h", "Stream.h",
                     "Stream.cpp", "stdlib_noniso.h", "stdlib_noniso.c", "pgmspace.h"],

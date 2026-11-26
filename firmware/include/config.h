@@ -11,11 +11,6 @@
 // Idle time before deep sleep.
 #define SLEEP_AFTER_MS (3UL * 60UL * 1000UL)
 
-// Battery: only used with the older LC709203F monitor, which reports the
-// voltage; the MAX17048 gives the charge itself.
-#define VBAT_EMPTY_MV 3300
-#define VBAT_FULL_MV  4150
-
 // Reading layout
 #define MARGIN_X      12
 #define MARGIN_TOP    8

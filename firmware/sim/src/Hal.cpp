@@ -66,6 +66,7 @@ Pin pins[49];
 int level(int p) {
     if (p < 0 || p >= 49) return LOW;
     if (p == PIN_EPD_BUSY) return panel.busy(sim::nowMs()) ? HIGH : LOW;
+    if (p == PIN_VBUS_SENSE) return sim::usbPowered() ? HIGH : LOW;
     const Pin& s = pins[p];
     if (s.mode == OUTPUT) return s.out;
     if (s.ext >= 0) return s.ext;
@@ -84,7 +85,7 @@ void pinsChanged() {
         if (pwr != lastPwr) {
             lastPwr = pwr;
             if (pwr == LOW) panel.powerLoss();
-            js_led(pwr == HIGH);   // the red LED shares the line
+            js_led(pwr == HIGH);   // display power indicator in the page
         }
     }
     int rst = level(PIN_EPD_RST);
@@ -202,9 +203,9 @@ extern "C" EMSCRIPTEN_KEEPALIVE void sim_set_battery(int fitted, int percent, in
     gaugeMv = mv;
 }
 
-// The monitor answers only while its rail (and the I2C pull-ups) are on.
+// The gauge sits on the always-on LDO1 of the FeatherS3[D].
 static bool gaugeAnswers(uint8_t addr) {
-    return gaugeFitted && addr == fuelgauge::kMax17048Addr && level(PIN_I2C_POWER) == HIGH;
+    return gaugeFitted && addr == fuelgauge::kMax17048Addr;
 }
 
 static uint16_t gaugeRegister(uint8_t reg) {

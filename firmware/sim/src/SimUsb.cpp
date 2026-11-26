@@ -18,6 +18,7 @@ static msc_start_stop_cb startStop = nullptr;
 static bool mscStarted = false;
 
 bool sim::usbComputer() { return cable == Computer; }
+bool sim::usbPowered() { return cable != None; }
 
 static void fire(int32_t id) {
     for (auto h : handlers) h(nullptr, ARDUINO_USB_EVENTS, id, nullptr);

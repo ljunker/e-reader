@@ -28,7 +28,7 @@ let M = null;               // running firmware instance
 let fsOwner = null;         // instance whose FS the file panel uses
 let state = 'off';          // off | awake | sleep
 let rtcSaved = null, wakeMask = 0;
-let buttonPins = [5, 6, 9, 10, 11];
+let buttonPins = [11, 10, 7, 1, 0];
 const held = new Set();     // button indices currently pressed
 let cable = 0, usbMedia = false, webOn = false;
 let nextReq = 1;
