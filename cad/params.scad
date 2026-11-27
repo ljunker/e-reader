@@ -53,7 +53,7 @@ left_handed = true;
 // ---------- label engraved on the back ----------
 // Any text; "" for none. Also settable at build time: make LABEL="My reader".
 // Keep it short enough to fit the back (≈ 90 mm wide at size 7).
-label       = "e-reader";
+label       = "OpenReader";
 label_size  = 7;      // cap height in mm
 label_font  = "Liberation Sans";
 label_depth = 0.4;    // engraving depth
