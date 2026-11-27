@@ -5,6 +5,7 @@
 
 #include "Book.h"
 #include "Buttons.h"
+#include "Catalog.h"
 #include "Covers.h"
 #include "Display.h"
 #include "PageCache.h"
@@ -31,7 +32,8 @@ public:
     uint32_t openPosition() const;
 
 private:
-    enum class Screen { Library, Reader, Menu, Toc, Message, Wifi, UsbAsk, Usb };
+    enum class Screen { Library, Reader, Menu, Toc, Message, Wifi, UsbAsk, Usb,
+                        CatalogPick, Catalog, CatalogBook, CatalogMsg };
     struct MenuItem { String label; void (Ui::*action)(); };
 
     void showLibrary(bool full = false);
@@ -50,6 +52,8 @@ private:
     void showUsbAsk();
     void showUsb();
     void showText(const char* title, const char* const* lines, int n, const char* hint);
+    // Word-wrapped text from `y` down to `maxY` in the current font; returns the next y.
+    int drawWrapped(const String& text, int y, int maxY, int lineH = 20);
     void back();   // to the open book, else the library
     // One page of a selectable list below the header; `item` fills in the
     // label, an optional left indent and an optional tag shown on the right.
@@ -88,6 +92,21 @@ private:
     void actUsb();
     void actUsbStop();
 
+    // online library (OPDS)
+    void actCatalog();
+    void showCatalogPick();
+    void enterCatalog(int i);
+    void showCatalog();
+    void showCatalogBook();
+    void showCatalogMsg(const String& text);
+    void catalogStatus(const String& text);   // one line at the bottom, partial refresh
+    bool openFeed(const std::string& url, bool push);
+    void feedBack();                           // BACK in a list: up one level
+    void catalogOk();
+    void downloadSelected();
+    void leaveCatalog(const String& selectPath = String());
+    void handleCatalog(const ButtonEvent& e);
+
     Screen screen_ = Screen::Library;
     Screen beforeMenu_ = Screen::Library;
     std::vector<BookEntry> books_;
@@ -101,6 +120,22 @@ private:
     pagecache::Slots pages_;                // which page each frame holds
     Display::Frame frames_[pagecache::Slots::kSlots];
     bool sleepRequested_ = false;
+
+    struct FeedLevel {
+        std::string url;
+        int sel = 0;
+    };
+    std::vector<opds::Catalog> catalogs_;
+    int catalogSel_ = 0;
+    bool catalogActive_ = false;
+    uint32_t catalogInput_ = 0;      // millis() of the last button in the online library
+    std::vector<FeedLevel> trail_;   // feeds opened, the current one last
+    opds::Feed feed_;
+    std::vector<bool> onCard_;       // parallel to feed_.entries
+    bool feedLoaded_ = false;
+    int feedSel_ = 0;
+    String catalogNote_;             // shown on the book page (saved, error)
+    String catalogSaved_;            // last book downloaded: selected in the library afterwards
     String storageError_;
 };
 

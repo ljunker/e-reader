@@ -5,6 +5,8 @@
 #include "Display.h"
 #include "Cover.h"
 #include "Fonts.h"
+#include "Http.h"
+#include "Net.h"
 #include "Power.h"
 #include "Progress.h"
 #include "UsbDrive.h"
@@ -320,20 +322,26 @@ void Ui::showMessage(const String& title, const String& text) {
     drawHeader(title.c_str());
     auto& t = display.text();
     t.setFont(fonts::ui());
-    int y = LIST_TOP + 24;
+    drawWrapped(text, LIST_TOP + 24, display.height());
+    display.show(true);
+}
+
+int Ui::drawWrapped(const String& text, int y, int maxY, int lineH) {
+    auto& t = display.text();
     int start = 0;
-    while (start <= int(text.length())) {
+    while (start <= int(text.length()) && y <= maxY) {
         int nl = text.indexOf('\n', start);
         String line = text.substring(start, nl < 0 ? text.length() : nl);
         // naive wrap at word boundaries
-        while (line.length()) {
+        while (line.length() && y <= maxY) {
             int cut = line.length();
             while (cut > 0 && t.getUTF8Width(line.substring(0, cut).c_str()) > display.width() - 2 * MARGIN_X) {
                 int sp = line.lastIndexOf(' ', cut - 1);
                 cut = sp > 0 ? sp : cut - 1;
             }
+            if (cut == 0) cut = 1;
             t.drawUTF8(MARGIN_X, y, line.substring(0, cut).c_str());
-            y += 20;
+            y += lineH;
             line = line.substring(cut);
             line.trim();
         }
@@ -341,7 +349,7 @@ void Ui::showMessage(const String& title, const String& text) {
         if (nl == start) y += 8;   // blank line = paragraph gap
         start = nl + 1;
     }
-    display.show(true);
+    return y;
 }
 
 void Ui::showMenu() {
@@ -371,6 +379,7 @@ void Ui::showMenu() {
     if (beforeMenu_ != Screen::Reader || !book_->fullScreen())
         menu_.push_back({storage::hyphenate() ? "Hyphenation: on" : "Hyphenation: off", &Ui::actHyphenation});
     menu_.push_back({storage::sleepCover() ? "Sleep screen: cover" : "Sleep screen: page", &Ui::actSleepScreen});
+    if (storageError_.isEmpty() && catalog::configured()) menu_.push_back({"Online library", &Ui::actCatalog});
     if (storageError_.isEmpty()) menu_.push_back({"Wi-Fi upload", &Ui::actWifi});
     if (usbdrive::available() && usbdrive::hostConnected()) menu_.push_back({"USB drive", &Ui::actUsb});
     menu_.push_back({"Sleep now", &Ui::actSleep});
@@ -599,6 +608,10 @@ void Ui::actUsbStop() {
 }
 
 void Ui::poll() {
+    if (catalogActive_) {
+        if (millis() - catalogInput_ > WIFI_IDLE_MS) leaveCatalog();
+        return;
+    }
     if (wifishare::active()) {
         wifishare::loop();
         if (screen_ == Screen::Wifi && wifishare::takeChanged()) showWifi();
@@ -616,7 +629,295 @@ void Ui::poll() {
     if (screen_ == Screen::Reader && book_) prerender();
 }
 
-bool Ui::busy() const { return wifishare::active() || usbdrive::active() || screen_ == Screen::UsbAsk; }
+bool Ui::busy() const { return catalogActive_ || wifishare::active() || usbdrive::active() || screen_ == Screen::UsbAsk; }
+
+// ---------- online library (OPDS) ----------
+
+static String sizeText(uint32_t bytes) {
+    char s[16];
+    if (bytes >= 1048576) snprintf(s, sizeof s, "%.1f MB", bytes / 1048576.0);
+    else snprintf(s, sizeof s, "%lu KB", (unsigned long)((bytes + 1023) / 1024));
+    return s;
+}
+
+void Ui::actCatalog() {
+    closeBook();
+    String err;
+    if (!catalog::readList(catalogs_, err)) {
+        showMessage("Online library", err);
+        return;
+    }
+    screen_ = Screen::CatalogMsg;
+    const char* lines[] = {"Connecting to Wi-Fi ...", nullptr, "Networks come from", WIFI_FILE " on the card."};
+    showText("Online library", lines, 4, "");
+    display.show(true);
+    if (!net::join(err)) {
+        showMessage("Wi-Fi", err);
+        return;
+    }
+    catalogActive_ = true;
+    catalogInput_ = millis();
+    catalogSel_ = 0;
+    catalogSaved_ = "";
+    if (catalogs_.size() == 1) {
+        enterCatalog(0);
+        return;
+    }
+    showCatalogPick();
+}
+
+void Ui::showCatalogPick() {
+    screen_ = Screen::CatalogPick;
+    feedLoaded_ = false;
+    display.setPortrait(true);
+    display.clear();
+    drawHeader("Online library");
+    drawList(int(catalogs_.size()), catalogSel_, [this](int i, String& label, int&, const char*&) {
+        label = catalogs_[i].name.c_str();
+    });
+    display.show(true);
+}
+
+void Ui::enterCatalog(int i) {
+    catalog::use(catalogs_[i]);
+    trail_.clear();
+    feedLoaded_ = false;
+    openFeed(catalogs_[i].url, true);
+}
+
+void Ui::catalogStatus(const String& text) {
+    auto& t = display.text();
+    int h = 16;
+    display.gfx().fillRect(0, display.height() - h, display.width(), h, GxEPD_WHITE);
+    t.setFont(fonts::small());
+    t.drawUTF8(MARGIN_X, display.height() - 6, text.c_str());
+    display.show();
+}
+
+bool Ui::openFeed(const std::string& url, bool push) {
+    catalogStatus("Loading ...");
+    opds::Feed f;
+    String err;
+    if (!catalog::load(url, f, err)) {
+        showCatalogMsg(err);
+        return false;
+    }
+    if (push) {
+        if (!trail_.empty()) trail_.back().sel = feedSel_;
+        trail_.push_back({url, 0});
+        if (trail_.size() > 12) trail_.erase(trail_.begin());
+    }
+    feed_ = std::move(f);
+    feedSel_ = 0;
+    feedLoaded_ = true;
+    onCard_.assign(feed_.entries.size(), false);
+    for (size_t i = 0; i < feed_.entries.size(); i++) onCard_[i] = catalog::onCard(feed_.entries[i]);
+    showCatalog();
+    return true;
+}
+
+void Ui::feedBack() {
+    if (trail_.size() < 2) {
+        if (catalogs_.size() > 1) showCatalogPick();
+        else leaveCatalog();
+        return;
+    }
+    int sel = trail_[trail_.size() - 2].sel;
+    std::string url = trail_[trail_.size() - 2].url;
+    if (!openFeed(url, false)) return;
+    trail_.pop_back();
+    int rows = int(feed_.entries.size()) + (feed_.next.empty() ? 0 : 1);
+    feedSel_ = std::min(sel, std::max(0, rows - 1));
+    showCatalog();
+}
+
+void Ui::showCatalog() {
+    screen_ = Screen::Catalog;
+    display.setPortrait(true);
+    display.clear();
+    String title = feed_.title.empty() ? String(catalogs_[catalogSel_].name.c_str()) : String(feed_.title.c_str());
+    display.text().setFont(fonts::uiBold());
+    fitText(title, display.width() - 2 * MARGIN_X - 70);
+    drawHeader(title.c_str());
+    int count = int(feed_.entries.size());
+    if (count == 0 && feed_.next.empty()) {
+        display.text().setFont(fonts::ui());
+        display.text().drawUTF8(MARGIN_X, LIST_TOP + 30, "Nothing here.");
+        display.text().setFont(fonts::small());
+        display.text().drawUTF8(MARGIN_X, display.height() - 6, "BACK: up");
+        display.show(true);
+        return;
+    }
+    drawList(count + (feed_.next.empty() ? 0 : 1), feedSel_, [this, count](int i, String& label, int&, const char*& tag) {
+        if (i == count) {
+            label = "More ...";
+            return;
+        }
+        const opds::Entry& e = feed_.entries[i];
+        label = e.title.c_str();
+        if (!e.download.empty()) tag = onCard_[i] ? "on card" : e.type == "text/plain" ? "TXT" : "EPUB";
+        else if (e.otherFormat) tag = "-";
+        else tag = ">";
+    });
+    display.show(true);
+}
+
+void Ui::showCatalogBook() {
+    screen_ = Screen::CatalogBook;
+    const opds::Entry& e = feed_.entries[feedSel_];
+    display.setPortrait(true);
+    display.clear();
+    drawHeader("Book");
+    auto& t = display.text();
+    int bottom = display.height() - 22;
+    t.setFont(fonts::uiBold());
+    int y = drawWrapped(e.title.c_str(), LIST_TOP + 22, LIST_TOP + 22 + 2 * 22, 22);
+    t.setFont(fonts::ui());
+    if (!e.author.empty()) y = drawWrapped(e.author.c_str(), y, y, 20);
+    String info;
+    if (e.download.empty()) info = "Not offered as EPUB or text";
+    else info = String(e.type == "text/plain" ? "TXT" : "EPUB") + (e.size ? " \xc2\xb7 " + sizeText(e.size) : String()) +
+                (onCard_[feedSel_] ? " \xc2\xb7 on the card" : "");
+    t.setFont(fonts::small());
+    y = drawWrapped(info, y + 4, y + 4, 18);
+    if (catalogNote_.length()) {
+        t.setFont(fonts::uiBold());
+        y = drawWrapped(catalogNote_, y + 6, y + 6 + 3 * 20);
+    }
+    if (!e.summary.empty()) {
+        display.gfx().drawFastHLine(MARGIN_X, y, display.width() - 2 * MARGIN_X, GxEPD_BLACK);
+        t.setFont(fonts::small());
+        drawWrapped(e.summary.c_str(), y + 18, bottom - 8, 17);
+    }
+    t.setFont(fonts::small());
+    const char* hint = e.download.empty() ? "BACK: list"
+                       : onCard_[feedSel_] ? "OK: read   MENU: load again   BACK: list"
+                                           : "OK: download   BACK: list";
+    t.drawUTF8(MARGIN_X, display.height() - 6, hint);
+    display.show(true);
+}
+
+void Ui::showCatalogMsg(const String& text) {
+    screen_ = Screen::CatalogMsg;
+    display.setPortrait(true);
+    display.clear();
+    drawHeader("Online library");
+    display.text().setFont(fonts::ui());
+    drawWrapped(text, LIST_TOP + 24, display.height() - 30);
+    display.text().setFont(fonts::small());
+    display.text().drawUTF8(MARGIN_X, display.height() - 6, "Any button: back");
+    display.show(true);
+}
+
+void Ui::downloadSelected() {
+    const opds::Entry& e = feed_.entries[feedSel_];
+    uint32_t lastDraw = 0;
+    int lastStep = -1;
+    auto progress = [&](uint32_t done, int32_t total) {
+        // a partial refresh takes a few hundred ms: at most every 10 % or 256 KB, and once a second
+        int step = total > 0 ? int(uint64_t(done) * 10 / uint32_t(total)) : int(done / 262144);
+        if (step == lastStep || (lastStep >= 0 && millis() - lastDraw < 1000)) return;
+        lastStep = step;
+        lastDraw = millis();
+        String s = "Downloading " + sizeText(done);
+        if (total > 0) s += " of " + sizeText(uint32_t(total)) + " (" + String(int(uint64_t(done) * 100 / uint32_t(total))) + " %)";
+        catalogStatus(s);
+    };
+    String path, err;
+    if (catalog::download(e, path, err, progress)) {
+        onCard_[feedSel_] = true;
+        catalogSaved_ = path;
+        catalogNote_ = "Saved as " + path.substring(path.lastIndexOf('/') + 1);
+    } else {
+        catalogNote_ = err;
+    }
+    catalogInput_ = millis();
+    showCatalogBook();
+}
+
+void Ui::catalogOk() {
+    int count = int(feed_.entries.size());
+    if (feedSel_ == count) {
+        // next page: replaces this one in the trail, BACK goes up, not to the previous page
+        std::string next = feed_.next;
+        if (openFeed(next, false) && !trail_.empty()) trail_.back().url = next;
+        return;
+    }
+    if (feedSel_ < 0 || feedSel_ >= count) return;
+    const opds::Entry& e = feed_.entries[feedSel_];
+    if (!e.download.empty() || e.otherFormat) {
+        catalogNote_ = "";
+        showCatalogBook();
+    } else if (!e.nav.empty()) {
+        openFeed(e.nav, true);
+    }
+}
+
+void Ui::leaveCatalog(const String& selectPath) {
+    catalogActive_ = false;
+    feed_ = opds::Feed();
+    onCard_.clear();
+    trail_.clear();
+    feedLoaded_ = false;
+    http::forget();
+    net::leave();
+    reloadBooks(selectPath.length() ? selectPath : catalogSaved_);
+}
+
+void Ui::handleCatalog(const ButtonEvent& e) {
+    catalogInput_ = millis();
+    int step = e.longPress ? 10 : 1;
+    switch (screen_) {
+        case Screen::CatalogPick: {
+            int n = int(catalogs_.size());
+            switch (e.button) {
+                case Btn::Next: catalogSel_ = std::min(n - 1, catalogSel_ + step); showCatalogPick(); break;
+                case Btn::Prev: catalogSel_ = std::max(0, catalogSel_ - step); showCatalogPick(); break;
+                case Btn::Ok: enterCatalog(catalogSel_); break;
+                case Btn::Back: case Btn::Menu: leaveCatalog(); showLibrary(true); break;
+                default: break;
+            }
+            break;
+        }
+        case Screen::Catalog: {
+            int rows = int(feed_.entries.size()) + (feed_.next.empty() ? 0 : 1);
+            switch (e.button) {
+                case Btn::Next: if (rows) { feedSel_ = std::min(rows - 1, feedSel_ + step); showCatalog(); } break;
+                case Btn::Prev: if (rows) { feedSel_ = std::max(0, feedSel_ - step); showCatalog(); } break;
+                case Btn::Ok: catalogOk(); break;
+                case Btn::Back: feedBack(); if (!catalogActive_) showLibrary(true); break;
+                case Btn::Menu: leaveCatalog(); showLibrary(true); break;
+                default: break;
+            }
+            break;
+        }
+        case Screen::CatalogBook: {
+            const opds::Entry& b = feed_.entries[feedSel_];
+            bool have = onCard_[feedSel_];
+            if (e.button == Btn::Back) {
+                showCatalog();
+            } else if (e.button == Btn::Ok && have) {
+                String path = catalog::pathFor(b);
+                leaveCatalog(path);
+                if (!books_.empty() && books_[sel_].path == path) openSelected();
+                else showLibrary(true);
+            } else if ((e.button == Btn::Ok && !b.download.empty()) || (e.button == Btn::Menu && have)) {
+                downloadSelected();
+            }
+            break;
+        }
+        case Screen::CatalogMsg:
+            if (feedLoaded_) showCatalog();
+            else if (catalogActive_ && catalogs_.size() > 1) showCatalogPick();
+            else {
+                leaveCatalog();
+                showLibrary(true);
+            }
+            break;
+        default:
+            break;
+    }
+}
 
 // ---------- input ----------
 
@@ -686,6 +987,12 @@ void Ui::handle(const ButtonEvent& e) {
             break;
         case Screen::Usb:
             if (e.button == Btn::Back) actUsbStop();
+            break;
+        case Screen::CatalogPick:
+        case Screen::Catalog:
+        case Screen::CatalogBook:
+        case Screen::CatalogMsg:
+            handleCatalog(e);
             break;
     }
 }
