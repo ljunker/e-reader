@@ -70,6 +70,7 @@
         <label class="inline"><input type="checkbox" id="wifiRange" checked> A network from <code>wifi.txt</code> is in range</label>
       </div>
       <p class="hint" id="webState">Upload page: off. Start it on the reader with MENU → Wi‑Fi upload.</p>
+      <p class="hint">Online library: MENU → Online library opens the catalogs in <code>opds.txt</code>, at first a demo catalog of the sample books (user and password <code>demo</code>). Other catalogs are fetched through this page's server.</p>
       <div class="web" id="web" hidden>
         <p><a href="device/" target="_blank" rel="noopener">Open the upload page in a new tab</a> (served by the firmware's web server)</p>
         <iframe id="webFrame" title="Upload page of the reader"></iframe>
@@ -87,6 +88,7 @@
       <div class="row">
         <button id="refreshFiles">Refresh list</button>
         <button id="editWifi">Edit wifi.txt</button>
+        <button id="editOpds">Edit opds.txt</button>
         <button id="wipeCard" class="danger">Reset card</button>
       </div>
       <div class="editor" id="wifiEditor" hidden>
