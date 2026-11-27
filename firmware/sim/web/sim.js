@@ -10,6 +10,10 @@ const SAMPLES = ['sample.epub', 'sample2.epub', 'drm.epub'];
 const HYPHENATION = ['de.hyp', 'en.hyp'];   // sdcard/hyph in the repository
 const FONTS = ['literata.xff'];             // sdcard/fonts
 const WIFI_SAMPLE = '# One network per line: SSID = key (empty for an open network)\nSimulator WLAN =\n';
+// The demo catalog of sim/serve.py, behind Digest authentication like Calibre.
+const OPDS_SAMPLE = () => '# Online library: one OPDS catalog per line, Name = URL\n' +
+  `Demo library = ${location.protocol}//demo:demo@${location.host}${location.pathname.replace(/[^/]*$/, '')}opds-demo/\n` +
+  '# Project Gutenberg = https://www.gutenberg.org/ebooks.opds/\n';
 const SAMPLE_TXT = `Welcome to the e-reader simulator
 
 This page runs the real firmware, compiled to WebAssembly. The display, the five buttons, the microSD card, the USB-C port and the Wi-Fi upload page are simulated around it.
@@ -33,6 +37,8 @@ const held = new Set();     // button indices currently pressed
 let cable = 0, usbMedia = false, webOn = false;
 let nextReq = 1;
 const pending = new Map();  // http request id -> MessagePort
+const fetched = new Map();  // responses the firmware's HTTP client is reading
+let nextFetch = 1;
 
 // ---------------------------------------------------------------- panel
 
@@ -151,6 +157,30 @@ function hooks(boot) {
       port.postMessage({ status: code, type, body }, [body.buffer]);
     },
     webListening: (on) => { webOn = on; showWeb(); },
+    // the firmware's HTTP client (sim/src/SimHttp.cpp), through serve.py's /proxy
+    httpGet: async (url, headerLines) => {
+      const lines = headerLines.split('\n'), headers = {};
+      for (let i = 0; i + 1 < lines.length; i += 2) if (lines[i]) headers['X-Fwd-' + lines[i]] = lines[i + 1];
+      try {
+        const r = await fetch('proxy?url=' + encodeURIComponent(url), { headers, cache: 'no-store' });
+        if (r.status !== 200 || !r.headers.has('X-Status')) {
+          log('HTTP ' + url + ': ' + (await r.text() || r.status), 'err');
+          return -1;
+        }
+        const fwd = new Headers();
+        for (const [k, v] of r.headers) if (k.startsWith('x-fwd-')) fwd.set(k.slice(6), v);
+        const body = new Uint8Array(await r.arrayBuffer());
+        const id = nextFetch++;
+        fetched.set(id, { status: +r.headers.get('X-Status'), headers: fwd, body, size: body.length });
+        log(`HTTP GET ${url.replace(/\/\/[^/@]*@/, '//')} → ${r.headers.get('X-Status')} (${fmtSize(body.length)})`);
+        return id;
+      } catch (e) {
+        log('HTTP ' + url + ': ' + e, 'err');
+        return -1;
+      }
+    },
+    httpResult: (id) => fetched.get(id),
+    httpFree: (id) => fetched.delete(id),
     usbMedia: (on) => { usbMedia = on; $('#drive').hidden = !on; },
     fsChanged: () => { scheduleSync(); scheduleList(); },
   };
@@ -209,6 +239,7 @@ function pushBattery(inst = M) {
 function endInstance() {
   for (const [id, port] of pending) port.postMessage({ status: 504, type: 'text/plain', body: new Uint8Array() });
   pending.clear();
+  fetched.clear();
   webOn = false; showWeb();
   usbMedia = false; $('#drive').hidden = true;
   M = null;
@@ -308,6 +339,7 @@ async function seedCard(inst) {
   const empty = FS.readdir(CARD).length <= 2;   // only . and ..
   await seedFolder(FS, 'hyph', HYPHENATION);
   await seedFolder(FS, 'fonts', FONTS);
+  if (!FS.analyzePath(`${CARD}/opds.txt`).exists) FS.writeFile(`${CARD}/opds.txt`, OPDS_SAMPLE());
   if (!empty) return;
   log('First start: putting sample books and a wifi.txt on the card.');
   FS.mkdir(CARD + '/books');
@@ -417,7 +449,8 @@ async function addFiles(files) {
   try { FS.mkdir(CARD + '/books'); } catch { /* exists */ }
   for (const f of files) {
     const data = new Uint8Array(await f.arrayBuffer());
-    const target = f.name.toLowerCase() === 'wifi.txt' ? `${CARD}/wifi.txt` : `${CARD}/books/${f.name.replace(/[\\/]/g, '_')}`;
+    const lower = f.name.toLowerCase();
+    const target = lower === 'wifi.txt' || lower === 'opds.txt' ? `${CARD}/${lower}` : `${CARD}/books/${f.name.replace(/[\\/]/g, '_')}`;
     FS.writeFile(target, data);
     log(`Card: copied ${f.name} (${fmtSize(data.length)})`);
   }
@@ -433,16 +466,21 @@ drop.ondragleave = () => drop.classList.remove('over');
 drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove('over'); addFiles([...e.dataTransfer.files]); };
 $('#refreshFiles').onclick = listFiles;
 
-$('#editWifi').onclick = () => {
+// one editor for the two settings files in the top folder of the card
+let editing = 'wifi.txt';
+function editFile(name, sample) {
   let text = '';
-  try { text = new TextDecoder().decode(fsOwner.FS.readFile(CARD + '/wifi.txt')); } catch { text = WIFI_SAMPLE; }
+  try { text = new TextDecoder().decode(fsOwner.FS.readFile(`${CARD}/${name}`)); } catch { text = sample; }
+  editing = name;
   $('#wifiText').value = text;
   $('#wifiEditor').hidden = false;
   $('#wifiText').focus();
-};
+}
+$('#editWifi').onclick = () => editFile('wifi.txt', WIFI_SAMPLE);
+$('#editOpds').onclick = () => editFile('opds.txt', OPDS_SAMPLE());
 $('#cancelWifi').onclick = () => { $('#wifiEditor').hidden = true; };
 $('#saveWifi').onclick = () => {
-  fsOwner.FS.writeFile(CARD + '/wifi.txt', new TextEncoder().encode($('#wifiText').value));
+  fsOwner.FS.writeFile(`${CARD}/${editing}`, new TextEncoder().encode($('#wifiText').value));
   $('#wifiEditor').hidden = true;
   afterEdit();
 };

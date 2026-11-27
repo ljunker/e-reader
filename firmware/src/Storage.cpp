@@ -66,7 +66,8 @@ static void scan(const char* dir, std::vector<BookEntry>& out) {
         BookKind k = kindOf(name);
         if (k == BookKind::Other) continue;
         String path = String(dir) + (String(dir).endsWith("/") ? "" : "/") + name;
-        if (path.equalsIgnoreCase(WIFI_FILE)) continue;   // the Wi-Fi list is not a book
+        // the Wi-Fi and catalog lists are not books
+        if (path.equalsIgnoreCase(WIFI_FILE) || path.equalsIgnoreCase(OPDS_FILE)) continue;
         int dot = name.lastIndexOf('.');
         out.push_back({path, dot > 0 ? name.substring(0, dot) : name, k, uint32_t(f.size())});
     }

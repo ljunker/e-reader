@@ -10,7 +10,7 @@ It reads books in portrait at 300 × 400, sleeps between page turns and runs for
 |---|---|
 | **Formats** | `.txt`; **EPUB** laid out on the device (bold/italic, headings, pictures, table of contents); **PDF / comics** pre-rendered on your computer with [`xtconvert`](tools/converter) into `.xtp` |
 | **Controls** | PREV / NEXT on the grip edge (left by default, `left_handed` in `cad/params.scad`), MENU / OK / BACK below the screen; long press jumps 10 pages |
-| **Getting books on** | microSD card, Wi‑Fi upload page in the browser, or USB drive over USB‑C |
+| **Getting books on** | microSD card, Wi‑Fi upload page in the browser, USB drive over USB‑C, or straight from an OPDS catalog (Calibre content server, Project Gutenberg …) |
 | **Case** | ~95 × 137 × 17 mm, parametric OpenSCAD, fits a Bambu A1 mini |
 
 ## Repository
@@ -64,6 +64,9 @@ and String/FS from the arduino-esp32 core, to WebAssembly. Only the hardware und
   view, and "Eject" ejects it.
 - **Wi‑Fi:** the firmware's own upload page appears in the side panel. A service worker passes its requests to the
   firmware's web server.
+- **Online library:** the card gets an `opds.txt` for a demo catalog of the sample books that `serve.py` serves,
+  behind Digest login like Calibre (user and password `demo`). The firmware's HTTP requests go through
+  `serve.py`'s `/proxy`, so real catalogs (your Calibre server, Gutenberg) work too. "Edit opds.txt" changes the list.
 - **Battery:** a simulated MAX17048 on I2C, set with the slider.
 
 Not simulated: radio, real USB/sector access, RAM/PSRAM limits and the speed of the ESP32-S3 (EPUB conversion is
@@ -113,6 +116,29 @@ and the reader returns to the library. A charger alone never triggers the questi
 The firmware uses its own partition table (`firmware/partitions-16MB.csv`: two 4 MB app slots, TinyUF2, FAT); the first
 `pio run -t upload` after updating rewrites it. Saved reading positions stay.
 
+## Online library (OPDS / Calibre)
+Browse an OPDS catalog on the reader and download books straight into `books/`. Put an `opds.txt` next to
+`wifi.txt` in the top folder of the card, one catalog per line:
+```
+# Name = URL   (user and password go into the URL; add "insecure" for a self-signed HTTPS server)
+Calibre = http://leser:geheim@192.168.1.10:8080/opds
+Project Gutenberg = https://www.gutenberg.org/ebooks.opds/
+```
+MENU → **Online library** joins the Wi‑Fi from `wifi.txt` and opens the catalog (with several, it asks which).
+PREV/NEXT move, OK opens a folder or a book, BACK goes up a level and, at the top, switches Wi‑Fi off; MENU
+leaves straight away. A book shows its author, size and description; OK downloads it as
+`books/<Title> - <Author>.epub` (or `.txt`), and OK again opens it. "More …" at the end of a list loads the next
+page. Ten minutes without a button switch Wi‑Fi off.
+
+**Calibre:** start the content server (Preferences → Sharing over the net, or
+`calibre-server --listen-on 0.0.0.0 ~/Calibre\ Library`); the catalog is at `http://<computer>:8080/opds`.
+With "Require username and password" on, put them into the URL as above (percent-encode `@`, `:` and `/` in
+them). Both of Calibre's login methods work (Digest over HTTP, Basic over HTTPS). The reader sends them only to the
+catalog's own server, and only after it asks.
+
+Works with OPDS 1.x (Atom) catalogs; EPUB is taken first, then plain text. Books offered only as MOBI, PDF or
+AZW are listed but cannot be downloaded. No search (there is no keyboard), and OPDS 2 (JSON) catalogs are not supported.
+
 ## Status / roadmap
 - [x] Hardware design, wiring, BOM
 - [x] Parametric case with collision check
@@ -124,4 +150,5 @@ The firmware uses its own partition table (`firmware/partitions-16MB.csv`: two 4
 - [x] EPUB (unzip, OPF/spine, XHTML + CSS subset, images, table of contents)
 - [x] True 4-gray refresh for `.xtp` pages and the sleep-screen cover (about 5.5 s per refresh)
 - [x] Wi‑Fi upload page, USB mass storage
+- [x] Online library: OPDS catalogs (Calibre content server) over HTTP and HTTPS
 - [ ] Optional KiCad carrier PCB (draft in tag `carrier-pcb-draft`)

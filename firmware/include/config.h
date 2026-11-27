@@ -24,3 +24,6 @@
 #define WIFI_FILE       "/wifi.txt"
 #define WIFI_CONNECT_MS (20UL * 1000UL)        // give up joining after this
 #define WIFI_IDLE_MS    (10UL * 60UL * 1000UL) // switch Wi-Fi off after this long without a request
+
+// Online library: OPDS catalogs, one "Name = URL" per line.
+#define OPDS_FILE "/opds.txt"
