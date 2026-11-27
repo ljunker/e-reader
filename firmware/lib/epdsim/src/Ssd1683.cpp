@@ -146,13 +146,21 @@ void Ssd1683::activate(uint32_t nowMs) {
         // a power-on in the same sequence is part of the refresh time GxEPD2 expects
         ms = t;
         refreshes_++;
-        const uint8_t* frame = bw_;
         if (kind == Refresh::Gray) {
             for (int y = 0; y < kHeight; y++)
-                for (int x = 0; x < kWidth; x++) levels_[y * kWidth + x] = level(x, y);
-            frame = levels_;
+                for (int x = 0; x < kWidth; x++) glass_[y * kWidth + x] = level(x, y);
+        } else if (kind == Refresh::Full) {
+            for (int y = 0; y < kHeight; y++)
+                for (int x = 0; x < kWidth; x++) glass_[y * kWidth + x] = white(x, y) ? 3 : 0;
+        } else {   // only what changed against the previous picture, in the window
+            for (int y = yStart_; y <= yEnd_ && y < kHeight; y++)
+                for (int x = xStart_ * 8; x < (xEnd_ + 1) * 8 && x < kWidth; x++) {
+                    uint8_t m = 0x80 >> (x & 7);
+                    int i = y * kStride + x / 8;
+                    if ((bw_[i] ^ red_[i]) & m) glass_[y * kWidth + x] = (bw_[i] & m) ? 3 : 0;
+                }
         }
-        if (onRefresh) onRefresh(frame, kind, uint32_t(float(t) * timeScale));
+        if (onRefresh) onRefresh(glass_, kind, uint32_t(float(t) * timeScale));
     }
     if (s & 0x02) {
         if (!(s & 0x04)) ms += kPowerOffMs;

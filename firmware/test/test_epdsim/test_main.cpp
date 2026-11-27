@@ -192,6 +192,47 @@ void test_gray_refresh() {
     TEST_ASSERT_TRUE(seen.back() == Refresh::Full);
 }
 
+// GxEPD2's partial refresh drives only the pixels where the new picture
+// (RAM 0x24) differs from the previous one (RAM 0x26): grays from a 4-gray
+// refresh stay where both RAMs agree. The library's gray covers rely on it.
+void test_partial_keeps_grays() {
+    static Ssd1683 p;
+    const uint8_t* last = nullptr;
+    p.onRefresh = [&](const uint8_t* f, Refresh, uint32_t) { last = f; };
+    window(p, 0, 0, 8, 1);
+    cmd(p, 0x26, {0xAA});   // set = black or dark gray
+    window(p, 0, 0, 8, 1);
+    cmd(p, 0x24, {0x55});   // set = black or light gray: levels 1, 2, 1, 2, ...
+    cmd(p, 0x32, {0x01});
+    cmd(p, 0x22, {0xCF});
+    cmd(p, 0x20);
+    TEST_ASSERT_EQUAL(1, p.shown(0, 0));
+    TEST_ASSERT_EQUAL(2, p.shown(1, 0));
+    // GxEPD2 again: both RAMs get the same picture (all white), then pixel 0 turns black
+    cmd(p, 0x12);
+    window(p, 0, 0, Ssd1683::kWidth, Ssd1683::kHeight);
+    fill(p, 0x26, Ssd1683::kStride * Ssd1683::kHeight, 0xff);
+    window(p, 0, 0, Ssd1683::kWidth, Ssd1683::kHeight);
+    fill(p, 0x24, Ssd1683::kStride * Ssd1683::kHeight, 0xff);
+    window(p, 0, 0, 8, 1);
+    cmd(p, 0x24, {0x7f});
+    window(p, 0, 0, Ssd1683::kWidth, Ssd1683::kHeight);
+    cmd(p, 0x21, {0x00, 0x00});
+    cmd(p, 0x22, {0xfc});
+    cmd(p, 0x20, {}, 100000);
+    TEST_ASSERT_EQUAL(0, p.shown(0, 0));   // changed: driven black
+    TEST_ASSERT_EQUAL(2, p.shown(1, 0));   // unchanged: still gray
+    TEST_ASSERT_EQUAL(1, p.shown(2, 0));
+    TEST_ASSERT_TRUE(last != nullptr);
+    TEST_ASSERT_EQUAL(0, last[0]);
+    TEST_ASSERT_EQUAL(2, last[1]);
+    // a full refresh shows the black/white RAM everywhere
+    cmd(p, 0x21, {0x40, 0x00});
+    cmd(p, 0x22, {0xf7});
+    cmd(p, 0x20, {}, 200000);
+    TEST_ASSERT_EQUAL(3, p.shown(1, 0));
+}
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_full_screen_write);
@@ -202,5 +243,6 @@ int main() {
     RUN_TEST(test_deep_sleep_until_reset);
     RUN_TEST(test_y_decrement_mode);
     RUN_TEST(test_gray_refresh);
+    RUN_TEST(test_partial_keeps_grays);
     return UNITY_END();
 }

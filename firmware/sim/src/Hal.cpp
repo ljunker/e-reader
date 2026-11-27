@@ -144,9 +144,8 @@ static struct PanelHook {
     PanelHook() {
         panel.onRefresh = [](const uint8_t* frame, epdsim::Refresh kind, uint32_t ms) {
             using P = epdsim::Ssd1683;
-            bool gray = kind == epdsim::Refresh::Gray;
-            js_panel_refresh(frame, gray ? P::kWidth * P::kHeight : P::kStride * P::kHeight,
-                             gray ? 2 : kind == epdsim::Refresh::Full ? 0 : 1, int(ms));
+            js_panel_refresh(frame, P::kWidth * P::kHeight,
+                             kind == epdsim::Refresh::Gray ? 2 : kind == epdsim::Refresh::Full ? 0 : 1, int(ms));
         };
     }
 } panelHook;

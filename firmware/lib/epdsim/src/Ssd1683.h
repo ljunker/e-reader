@@ -27,11 +27,17 @@ public:
     static constexpr uint32_t kGrayMs = 5500;
     static constexpr uint32_t kResetMs = 10;
 
-    Ssd1683() { powerLoss(); }
+    Ssd1683() {
+        for (uint8_t& l : glass_) l = 3;
+        powerLoss();
+    }
 
-    // Called when the panel shows a new picture. Full and Partial: the
-    // black/white RAM (1 = white, row-major, kStride bytes per row). Gray:
-    // kWidth × kHeight bytes, one level per pixel, 0 = black .. 3 = white.
+    // Called when the panel shows a new picture, with what the glass shows
+    // afterwards: kWidth × kHeight bytes, one level per pixel, 0 = black ..
+    // 3 = white. Full: the black/white RAM. Partial: within the RAM window,
+    // the pixels where the black/white RAM differs from the red one (the
+    // previous picture); the others keep their level, grays included. Gray:
+    // the two RAMs as levels.
     std::function<void(const uint8_t* frame, Refresh kind, uint32_t durationMs)> onRefresh;
 
     // 1.0 = real panel timing, 0 = instant.
@@ -63,6 +69,8 @@ public:
         return uint8_t(((red_[i] & m) ? 0 : 2) + ((bw_[i] & m) ? 0 : 1));
     }
     bool waveformLoaded() const { return lutLoaded_; }
+    // Level the glass shows for a pixel after the last refresh.
+    uint8_t shown(int x, int y) const { return glass_[y * kWidth + x]; }
 
     // Diagnostics for the tests.
     uint32_t refreshCount() const { return refreshes_; }
@@ -78,7 +86,7 @@ private:
     void holdBusy(uint32_t ms, uint32_t nowMs);
 
     uint8_t bw_[kStride * kHeight];
-    uint8_t levels_[kWidth * kHeight];
+    uint8_t glass_[kWidth * kHeight];
     uint8_t red_[kStride * kHeight];
 
     uint8_t cmd_ = 0;

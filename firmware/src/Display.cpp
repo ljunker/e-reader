@@ -46,6 +46,7 @@ void Display::loadFrame(const Frame& f) {
     epd_.setRotation(f.rotation);
     memcpy(buffer(), f.bw, kBwBytes);
     grayFrame_ = false;
+    grayPictures_ = false;
     if (f.isGray && startGray()) memcpy(levels_, f.gray, kGrayBytes);
 }
 
@@ -65,6 +66,7 @@ void Display::begin(bool coldBoot) {
     text_.begin(epd_, *this);
     text_.setForegroundColor(GxEPD_BLACK);
     sinceFull_ = 1000;
+    grayOnGlass_ = false;
     initialised_ = true;
     (void)coldBoot;
 }
@@ -88,6 +90,16 @@ bool Display::startGray() {
     return true;
 }
 
+bool Display::startGrayPictures() {
+    if (!levels_) levels_ = static_cast<uint8_t*>(ps_malloc(kGrayBytes));
+    if (!shownLevels_) shownLevels_ = static_cast<uint8_t*>(ps_malloc(kGrayBytes));
+    if (!composed_) composed_ = static_cast<uint8_t*>(ps_malloc(kGrayBytes));
+    if (!levels_ || !shownLevels_ || !composed_) return false;
+    memset(levels_, 0xFF, kGrayBytes);   // white: no picture, the black-and-white frame shows
+    grayPictures_ = true;
+    return true;
+}
+
 // Logical (rotated) coordinates to the panel's, as GxEPD2_BW::drawPixel does.
 void Display::setLevel(int16_t x, int16_t y, uint8_t level) {
     if (x < 0 || y < 0 || x >= epd_.width() || y >= epd_.height()) return;
@@ -103,15 +115,59 @@ void Display::setLevel(int16_t x, int16_t y, uint8_t level) {
     levels_[i >> 2] = uint8_t((levels_[i >> 2] & ~(3 << shift)) | (level & 3) << shift);
 }
 
+// Only the light and dark grays need the 4-gray refresh; black and white
+// picture pixels are the same in the dithered black-and-white frame.
+static bool hasMidtones(const uint8_t* levels) {
+    for (size_t i = 0; i < kGrayBytes; i++) {
+        uint8_t b = levels[i];
+        if (b == 0xFF || b == 0x00) continue;
+        for (int k = 0; k < 8; k += 2) {
+            uint8_t l = (b >> k) & 3;
+            if (l == 1 || l == 2) return true;
+        }
+    }
+    return false;
+}
+
+// The black-and-white frame with the picture grays laid over it, shown with
+// a 4-gray refresh; then both RAMs get the black-and-white frame, so the
+// following partial refreshes keep the grays.
+void Display::showGrayPictures() {
+    const uint8_t* bw = buffer();
+    for (uint32_t i = 0; i < uint32_t(Panel::WIDTH) * Panel::HEIGHT; i++) {
+        uint8_t shift = 6 - 2 * (i & 3);
+        uint8_t l = (levels_[i >> 2] >> shift) & 3;
+        if (l == 0 || l == 3) l = (bw[i >> 3] & (0x80 >> (i & 7))) ? 3 : 0;
+        if (shift == 6) composed_[i >> 2] = 0;
+        composed_[i >> 2] |= uint8_t(l << shift);
+    }
+    epd_.epd2.showGray(composed_);
+    epd_.epd2.assumeShown(bw);
+    memcpy(shownLevels_, levels_, kGrayBytes);
+    grayOnGlass_ = true;
+    sinceFull_ = 0;
+}
+
 void Display::show(bool forceFull) {
     if (grayFrame_) {
         epd_.epd2.showGray(levels_);
         sinceFull_ = 1000;   // the next black-and-white update must be full
+        grayOnGlass_ = false;
         return;
     }
-    if (forceFull || sinceFull_ >= FULL_REFRESH_EVERY) {
+    bool full = forceFull || sinceFull_ >= FULL_REFRESH_EVERY;
+    if (grayPictures_ && hasMidtones(levels_)) {
+        if (full || !grayOnGlass_ || memcmp(levels_, shownLevels_, kGrayBytes) != 0) {
+            showGrayPictures();
+            return;
+        }
+    } else if (grayOnGlass_) {
+        full = true;   // a partial refresh would leave the old grays where nothing changed
+    }
+    if (full) {
         epd_.display(false);
         sinceFull_ = 0;
+        grayOnGlass_ = false;
     } else {
         epd_.display(true);
         sinceFull_++;

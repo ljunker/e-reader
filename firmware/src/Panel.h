@@ -16,6 +16,16 @@ public:
     // refresh. The next black-and-white update must be a full refresh.
     void showGray(const uint8_t* levels);
 
+    // After showGray(): put the black-and-white picture `bw` (GxEPD2's
+    // buffer) into both RAMs as if it had just been shown. The next partial
+    // refresh then drives only the pixels that differ from it; the others,
+    // grays included, stay on the glass as they are.
+    void assumeShown(const uint8_t* bw) {
+        _initial_write = false;   // else GxEPD2 clears the screen first
+        _initial_refresh = false;
+        writeImageAgain(bw, 0, 0, WIDTH, HEIGHT);
+    }
+
 private:
     void writePlane(uint8_t command, const uint8_t* levels, uint8_t setFor);
 };

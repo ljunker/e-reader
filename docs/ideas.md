@@ -14,7 +14,7 @@ those files on the card.
 | Feature | What it does | Flash | Data | Status |
 |---|---|---|---|---|
 | Cover as sleep screen | The panel shows the open book's cover while the reader sleeps (MENU → Sleep screen) | together ~12 KB code, +18.6 KB flash | `/.reader/<hash>.cov` | done |
-| Cover thumbnails in the library | Small dithered cover next to each book, made once when it first scrolls into view | ↑ | `/.reader/<hash>.cov` | done |
+| Cover thumbnails in the library | Small cover in true grays next to each book (4-gray refresh when the covers on screen change, fast partial refreshes keep the grays while the selection moves), made once when it first scrolls into view | ↑ | `/.reader/<hash>.cov` | done |
 | Better status line | Chapter title, "4 left · 37 / 280", battery symbol, progress bar with chapter ticks | ↑ | – | done |
 | Sort the library | Recently read first or by title (MENU → Sort), percent read and "finished" per book | ↑ | NVS | done |
 | USB power indicator | `+` after the battery percentage while USB-C supplies 5 V (VBUS sense on IO34) | < 0.1 KB | – | done |

@@ -187,6 +187,7 @@ void Ui::showLibrary(bool full) {
     screen_ = Screen::Library;
     display.setPortrait(true);
     display.clear();
+    display.startGrayPictures();   // covers in true grays
     drawHeader("Library");
     auto& t = display.text();
     t.setFont(fonts::ui());
@@ -222,6 +223,7 @@ void Ui::showLibrary(bool full) {
     for (int i = first; i < last; i++)
         if (covers::state(books_[i]) == covers::State::Missing) covers::build(books_[i]);
     display.clear();
+    display.startGrayPictures();   // covers in true grays
     drawHeader("Library");
     draw(false);
     display.show();
