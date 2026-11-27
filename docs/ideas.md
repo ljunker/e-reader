@@ -1,7 +1,7 @@
 # Feature ideas
 
-Firmware budget (measured 2026-11-27, `pio run -e feathers3d`): the app uses **1.78 MB of a 4 MB slot**, so about
-**2.4 MB are free**. The FeatherS3[D] has 16 MB flash, laid out in `firmware/partitions-16MB.csv` as two 4 MB app
+Firmware budget (measured 2026-11-27, `pio run -e feathers3d`): the app uses **2.01 MB of a 4 MB slot**, so about
+**2.2 MB are free** (1.78 MB before the online library). The FeatherS3[D] has 16 MB flash, laid out in `firmware/partitions-16MB.csv` as two 4 MB app
 slots (the second one is for Wi-Fi OTA), TinyUF2 and a 7.7 MB FAT partition that nothing uses yet. **8 MB PSRAM**
 (was 2 MB) holds fonts, hyphenation patterns, pictures and file data with room to spare.
 
@@ -48,8 +48,8 @@ those files on the card.
 | Feature | What it does | Flash | Notes |
 |---|---|---|---|
 | Fonts from SD + gray anti-aliasing | Fonts as files loaded into PSRAM, own TTFs via `xtconvert` | **saved 84 KB** (measured: U8g2 out, 20 KB built-in Inter in) | fonts from SD **done** (`/fonts/*.xff`, 2-bit glyphs, text shown black and white). A 4-gray refresh takes **5.5 s** on this panel, so only `.xtp` pages and the sleep cover use it (**done**, +2.8 KB). Gray text without the wait would need a custom LUT that darkens gray pixels after a fast b/w refresh (CrossPoint's trick); try after hardware bring-up |
-| OPDS / Calibre content server | Browse and download books on the device | ~15–25 KB (HTTP), +100 KB or more with HTTPS (mbedTLS) | **affordable now**: HTTPS fits easily in the 2.4 MB left |
-| KOReader progress sync | Share reading position with other devices | ~10 KB (HTTP), + HTTPS as above | same server code as OPDS |
+| OPDS / Calibre content server | Browse and download books on the device | **+220 KB** (measured: HTTPClient, mbedTLS and the CA bundle) | **done**: MENU → Online library, catalogs in `/opds.txt`, Basic and Digest login, HTTPS. No search (no keyboard), no OPDS 2 |
+| KOReader progress sync | Share reading position with other devices | ~5–10 KB (HTTPS is already in) | reuse `src/Http` and `src/Net` from the online library |
 | Bluetooth page-turn remote | Pair a cheap BLE HID clicker or a phone as remote; turns pages without touching the reader | ~150–250 KB (NimBLE) | **new**: did not fit next to Wi-Fi before. BLE costs battery while on, so only while a book is open and switchable in the menu |
 | Wallabag / Instapaper / Pocket-style reading list | Fetch saved web articles as EPUB over HTTPS | ~30–50 KB + HTTPS | alternative to doing it on the computer with `xtconvert <url>` |
 
@@ -62,7 +62,7 @@ those files on the card.
 
 ## Freeing flash
 
-Not urgent any more with 2.4 MB free.
+Not urgent any more with 2.2 MB free.
 
 | Change | Saves |
 |---|---|
